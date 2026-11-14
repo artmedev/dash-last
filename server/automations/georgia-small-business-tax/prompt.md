@@ -54,6 +54,17 @@ is filed AND (the tax is paid, OR the tax is 0, OR the user explicitly said they
 3. The records file `{{records_file}}` is **read-only**. Write the updated version as a separate file (step 8).
 4. Do not make up numbers. If a value on a site does not match your calculation, stop and ask.
 
+## Privacy
+
+- Never write in the chat or in status reports: names, personal or taxpayer numbers, account / IBAN /
+  card numbers, account balances, declaration registration numbers, logins. Refer to them generically
+  ("your account", "the declaration"). Amounts the task needs (income, rate, cumulative total, tax) are fine.
+- Look at as little as possible. Read only the values you need: prefer `find` or a targeted JavaScript
+  query that returns one value over reading the whole page; on bank pages take screenshots only when you
+  cannot act otherwise; do not open sections the playbook does not need.
+- Do not save page contents, screenshots or personal data to files, except the declaration PDF, the
+  receipt and the records file.
+
 ## Browser technique (learned on previous runs)
 
 - **Native browser dialogs freeze Claude in Chrome.** rs.ge shows `alert`/`confirm` popups (e.g. on

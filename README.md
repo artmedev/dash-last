@@ -61,6 +61,18 @@ The agent token identifies your agent, so nobody else can pick up your runs.
 4. Claude reports status with `node agent/report.js <id> running|succeeded|failed "..."`.
    After `succeeded` the task is marked done for the current period.
 
+## Privacy during runs
+
+- The agent masks personal identifiers (personal/taxpayer numbers, IBAN, card and document numbers,
+  e-mails, phones) **before** anything is sent to the Dash server. Extra terms, e.g. your name as banks
+  write it, go into `agent/private.json` (`{ "redact": ["SURNAME"] }`), which stays on your computer.
+- The prompt forbids Claude to mention names, numbers or balances in the chat and tells it to read only
+  the values it needs.
+- When a run ends, the agent deletes Claude Code's local transcript of it (page texts, screenshots),
+  its file history and the run's prompt and log files.
+- Limitation: Claude has to see the pages it works on, so page content goes to the Claude model under
+  your Claude account. Only a scripted (non-AI) path for the known steps would avoid that.
+
 ## Languages
 
 - Code, comments and logs are in English.

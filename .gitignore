@@ -5,3 +5,4 @@ agent/.agent.json
 agent/runs
 agent/agent.log
 agent/agent.pid
+agent/private.json

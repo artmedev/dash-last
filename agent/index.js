@@ -4,10 +4,12 @@
 // The conversation happens in the Dash web chat: Claude's messages are posted to the server,
 // the user's replies are fetched from the server and passed to Claude.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { spawn } from 'node:child_process';
 import { loadConfig, call, AGENT_DIR } from './config.js';
+import { redact } from './redact.js';
 
 const cfg = loadConfig(process.argv.slice(2));
 const RUNS_DIR = path.join(AGENT_DIR, 'runs');
@@ -45,12 +47,16 @@ function describeTool(block) {
   return { kind: 'other', detail: name };
 }
 
-/** Posts chat items in order; a failed post is logged and dropped, the run keeps going. */
+/**
+ * Posts chat items in order; a failed post is logged and dropped, the run keeps going.
+ * Personal data is masked here, before anything leaves the computer.
+ */
 function makeOutbox(runId) {
   let chain = Promise.resolve();
   return (items, awaitingUser) => {
+    const safe = items.map((it) => ({ ...it, text: redact(it.text) }));
     chain = chain
-      .then(() => call(cfg, `/runs/${runId}/messages`, { items, awaiting_user: awaitingUser }))
+      .then(() => call(cfg, `/runs/${runId}/messages`, { items: safe, awaiting_user: awaitingUser }))
       .catch((e) => log(`run #${runId}: failed to post messages: ${e.message}`));
     return chain;
   };
@@ -117,6 +123,8 @@ async function startSession(run, prompt, lang, resume = false) {
   proc.on('exit', (code) => {
     sessions.delete(id);
     errLog.end();
+    // The run is over (finished, cancelled or Claude crashed): remove Claude's local traces
+    wipeTraces(id, session.claudeSession);
     log(`run #${id}: Claude exited (code ${code})`);
     if (!session.finished) {
       // Claude stopped without reporting a result
@@ -140,6 +148,31 @@ async function startSession(run, prompt, lang, resume = false) {
     `Talk to the user in ${LANGUAGE_NAMES[lang] || 'English'}.`;
   sendUser(session, initial);
   log(`run #${id}: Claude started (${promptFile})`);
+}
+
+/**
+ * Deletes what Claude Code keeps on disk for a finished run: the conversation transcript
+ * (with page texts and screenshots), file-edit history and the run's prompt and log files.
+ */
+function wipeTraces(runId, claudeSession) {
+  const home = path.join(os.homedir(), '.claude');
+  const projectDir = path.join(home, 'projects', RUNS_DIR.replace(/[^a-zA-Z0-9]/g, '-'));
+  const targets = [
+    path.join(RUNS_DIR, `run-${runId}.md`),
+    path.join(RUNS_DIR, `run-${runId}.log`),
+  ];
+  if (claudeSession) {
+    targets.push(
+      path.join(projectDir, `${claudeSession}.jsonl`),
+      path.join(projectDir, claudeSession),
+      path.join(home, 'file-history', claudeSession),
+      path.join(home, 'session-env', claudeSession),
+    );
+  }
+  for (const t of targets) {
+    try { fs.rmSync(t, { recursive: true, force: true }); } catch (e) { log(`run #${runId}: cannot delete ${t}: ${e.message}`); }
+  }
+  log(`run #${runId}: local traces removed`);
 }
 
 function sendUser(session, text) {
