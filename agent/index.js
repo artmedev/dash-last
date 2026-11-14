@@ -30,7 +30,8 @@ function launch(run, prompt, lang) {
   const initial =
     `Read the file run-${id}.md in the current directory and follow its instructions exactly, step by step. ` +
     `Talk to the user in ${LANGUAGE_NAMES[lang] || 'English'}.`;
-  const claudeArgs = ['--chrome', ...addDirs.flatMap((d) => ['--add-dir', q(d)]), q(initial)].join(' ');
+  // The prompt goes first: --add-dir is variadic and would swallow a trailing positional argument
+  const claudeArgs = [q(initial), '--chrome', ...addDirs.flatMap((d) => ['--add-dir', q(d)])].join(' ');
 
   if (process.platform === 'win32') {
     const launcher = path.join(RUNS_DIR, `run-${id}.cmd`);
