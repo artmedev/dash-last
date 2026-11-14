@@ -202,6 +202,64 @@ api.post('/tasks/:id/complete', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+// ---------- todos (one-off tasks) ----------
+function validateTodo(body, partial = false) {
+  const out = {};
+  if (!partial || body.title !== undefined) {
+    if (!body.title || !String(body.title).trim()) return { code: 'title_required', error: 'Title is required' };
+    out.title = String(body.title).trim().slice(0, 500);
+  }
+  if (body.note !== undefined) out.note = String(body.note ?? '').trim().slice(0, 5000);
+  if (body.due_date !== undefined) {
+    if (body.due_date !== null && body.due_date !== '' && !isDate(body.due_date))
+      return { code: 'bad_date', error: 'Bad date' };
+    out.due_date = body.due_date || null;
+  }
+  if (body.done !== undefined) out.done = !!body.done;
+  return { value: out };
+}
+
+api.get('/todos', wrap(async (req, res) => {
+  const { rows } = await q(
+    `SELECT * FROM todos WHERE user_id = $1 ORDER BY (done_at IS NOT NULL), due_date NULLS LAST, id`,
+    [req.userId],
+  );
+  res.json(rows);
+}));
+
+api.post('/todos', wrap(async (req, res) => {
+  const { code, error, value } = validateTodo(req.body);
+  if (code) return fail(res, 400, code, error);
+  const { rows } = await q(
+    `INSERT INTO todos (user_id, title, note, due_date) VALUES ($1,$2,$3,$4) RETURNING *`,
+    [req.userId, value.title, value.note ?? '', value.due_date ?? null],
+  );
+  res.status(201).json(rows[0]);
+}));
+
+api.patch('/todos/:id', wrap(async (req, res) => {
+  const { code, error, value } = validateTodo(req.body, true);
+  if (code) return fail(res, 400, code, error);
+  const { rows } = await q(
+    `UPDATE todos SET
+       title = COALESCE($3, title),
+       note = COALESCE($4, note),
+       due_date = CASE WHEN $5::boolean THEN $6::date ELSE due_date END,
+       done_at = CASE WHEN $7::boolean IS NULL THEN done_at WHEN $7::boolean THEN COALESCE(done_at, now()) ELSE NULL END
+     WHERE id = $1 AND user_id = $2 RETURNING *`,
+    [req.params.id, req.userId, value.title ?? null, value.note ?? null,
+      'due_date' in value, value.due_date ?? null, value.done ?? null],
+  );
+  if (!rows[0]) return fail(res, 404, 'not_found', 'Not found');
+  res.json(rows[0]);
+}));
+
+api.delete('/todos/:id', wrap(async (req, res) => {
+  const { rowCount } = await q(`DELETE FROM todos WHERE id = $1 AND user_id = $2`, [req.params.id, req.userId]);
+  if (!rowCount) return fail(res, 404, 'not_found', 'Not found');
+  res.json({ ok: true });
+}));
+
 // ---------- runs ----------
 api.post('/tasks/:id/runs', wrap(async (req, res) => {
   const task = await loadTask(req, res);

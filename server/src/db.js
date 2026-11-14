@@ -60,5 +60,16 @@ export async function migrate() {
     ALTER TABLE runs ADD COLUMN IF NOT EXISTS awaiting_user BOOLEAN NOT NULL DEFAULT false;
     -- Claude Code session id: lets a restarted agent resume the same conversation
     ALTER TABLE runs ADD COLUMN IF NOT EXISTS claude_session TEXT;
+    -- One-off tasks (Todoist-like): a title, an optional note and due date, done once
+    CREATE TABLE IF NOT EXISTS todos (
+      id SERIAL PRIMARY KEY,
+      user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      due_date DATE,
+      done_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS todos_user_idx ON todos (user_id);
   `);
 }

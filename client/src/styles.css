@@ -157,3 +157,15 @@ input, select {
 .privacy h1 { margin: 8px 0 4px; }
 .privacy section { margin-top: 18px; }
 .privacy section p { margin: 6px 0 0; }
+
+.quick-add { display: flex; gap: 8px; align-items: center; padding: 10px; margin-bottom: 12px; }
+.quick-add input:first-child { flex: 1; min-width: 0; }
+.quick-add input[type=date] { width: auto; }
+@media (max-width: 480px) { .quick-add { flex-wrap: wrap; } .quick-add input:first-child { flex-basis: 100%; } }
+.tasks .clickable { cursor: pointer; }
+.tasks .overdue { color: var(--err); }
+.tasks .due-today { color: var(--ok); }
+.todo-edit { flex: 1; gap: 8px; }
+.todo-edit textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; }
+.todo-edit-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.todo-edit-foot input { width: auto; margin-right: auto; }

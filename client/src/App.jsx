@@ -5,6 +5,7 @@ import { useI18n } from './i18n.jsx';
 import LangSwitch from './LangSwitch.jsx';
 import Login from './pages/Login.jsx';
 import Tasks from './pages/Tasks.jsx';
+import Todos from './pages/Todos.jsx';
 import Store from './pages/Store.jsx';
 import Settings from './pages/Settings.jsx';
 import RunChat from './pages/RunChat.jsx';
@@ -52,6 +53,7 @@ export default function App() {
       <header className="topbar">
         <span className="logo">Dash</span>
         <nav>
+          <NavLink to="/todo">{t('nav.todos')}</NavLink>
           <NavLink to="/" end>{t('nav.tasks')}</NavLink>
           <NavLink to="/store">{t('nav.store')}</NavLink>
           <NavLink to="/settings">
@@ -71,6 +73,7 @@ export default function App() {
       </header>
       <main>
         <Routes>
+          <Route path="/todo" element={<Todos />} />
           <Route path="/" element={<Tasks />} />
           <Route path="/store" element={<Store />} />
           <Route path="/runs/:id" element={<RunChat />} />
