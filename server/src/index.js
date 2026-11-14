@@ -223,13 +223,14 @@ agent.post('/claim', wrap(async (req, res) => {
     `UPDATE runs SET status='claimed', updated_at=now()
      WHERE id = (SELECT id FROM runs WHERE user_id = $1 AND status='pending'
                  ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED)
-     RETURNING runs.*, (SELECT automation_slug FROM tasks WHERE id = runs.task_id) AS slug`,
+     RETURNING runs.*, (SELECT automation_slug FROM tasks WHERE id = runs.task_id) AS slug,
+               (SELECT lang FROM users WHERE id = runs.user_id) AS lang`,
     [req.userId],
   );
   const run = rows[0];
   if (!run) return res.json({ run: null });
-  const prompt = renderPrompt(run.slug, { ...run.params, run_id: run.id });
-  res.json({ run, prompt });
+  const prompt = renderPrompt(run.slug, { ...run.params, run_id: run.id }, run.lang);
+  res.json({ run, prompt, lang: run.lang });
 }));
 
 const RUN_STATUSES = ['running', 'succeeded', 'failed'];

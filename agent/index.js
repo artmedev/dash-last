@@ -14,7 +14,9 @@ fs.mkdirSync(RUNS_DIR, { recursive: true });
 
 const q = (s) => `"${String(s).replace(/"/g, '')}"`;
 
-function launch(run, prompt) {
+const LANGUAGE_NAMES = { en: 'English', ru: 'Russian' };
+
+function launch(run, prompt, lang) {
   const id = run.id;
   const reportCmd = `node ${q(path.join(AGENT_DIR, 'report.js'))} ${id}`;
   const promptFile = path.join(RUNS_DIR, `run-${id}.md`);
@@ -27,7 +29,7 @@ function launch(run, prompt) {
   // ASCII-only initial message, so the console code page does not matter.
   const initial =
     `Read the file run-${id}.md in the current directory and follow its instructions exactly, step by step. ` +
-    `Talk to the user in Russian.`;
+    `Talk to the user in ${LANGUAGE_NAMES[lang] || 'English'}.`;
   const claudeArgs = ['--chrome', ...addDirs.flatMap((d) => ['--add-dir', q(d)]), q(initial)].join(' ');
 
   if (process.platform === 'win32') {
@@ -54,13 +56,13 @@ function launch(run, prompt) {
 let online = null;
 async function tick() {
   try {
-    const { run, prompt } = await call(cfg, '/claim');
+    const { run, prompt, lang } = await call(cfg, '/claim');
     if (online !== true) console.log(`Connected to ${cfg.server}. Waiting for runs...`);
     online = true;
     if (run) {
       await call(cfg, `/runs/${run.id}/status`, { status: 'running', message: 'Claude window opened on the computer' });
       try {
-        launch(run, prompt);
+        launch(run, prompt, lang);
       } catch (e) {
         await call(cfg, `/runs/${run.id}/status`, { status: 'failed', message: `Agent could not open Claude: ${e.message}` });
       }

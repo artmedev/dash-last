@@ -66,7 +66,13 @@ export const findAutomation = (slug) => AUTOMATIONS.find((a) => a.slug === slug)
 
 export const publicCatalog = () => AUTOMATIONS.map(({ runParams, ...rest }) => rest);
 
-export function renderPrompt(slug, vars) {
-  const tpl = fs.readFileSync(path.join(dir, slug, 'prompt.md'), 'utf8');
+/**
+ * Prompt in the user's language: prompt.md is English (default), prompt-<lang>.md is a translation.
+ * Translations must be kept in sync with prompt.md.
+ */
+export function renderPrompt(slug, vars, lang = 'en') {
+  const localized = path.join(dir, slug, `prompt-${lang}.md`);
+  const file = lang !== 'en' && fs.existsSync(localized) ? localized : path.join(dir, slug, 'prompt.md');
+  const tpl = fs.readFileSync(file, 'utf8');
   return tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => String(vars[k] ?? `{{${k}}}`));
 }
