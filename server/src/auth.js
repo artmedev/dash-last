@@ -11,6 +11,17 @@ const google = new OAuth2Client();
 export const devAuthEnabled = () =>
   process.env.DEV_AUTH === '1' && process.env.NODE_ENV !== 'production';
 
+/**
+ * Superadmins (SUPERADMIN_EMAILS, comma separated) may open the owner's private sites behind Dash:
+ * Tools (artme.dev/tools owner view) and Jobs (jobs.artme.dev). Everyone else only gets their own Dash account.
+ * CHECK_EMAILS is the old name of the setting.
+ */
+export const isSuperadmin = (email) => {
+  const list = (process.env.SUPERADMIN_EMAILS || process.env.CHECK_EMAILS || '')
+    .toLowerCase().split(',').map((s) => s.trim()).filter(Boolean);
+  return !!email && list.includes(String(email).toLowerCase());
+};
+
 export const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
 async function upsertUser({ sub, email, name, picture }) {
