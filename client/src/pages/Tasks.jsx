@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, localToday } from '../api.js';
 import { useI18n } from '../i18n.jsx';
 import TaskForm from './TaskForm.jsx';
+import ShowDone from '../ShowDone.jsx';
 
 const ACTIVE = ['pending', 'claimed', 'running'];
 
@@ -41,8 +42,7 @@ export default function Tasks() {
     return () => clearInterval(id);
   }, [hasActive, load]);
 
-  const toggleShowDone = () => {
-    const v = !showDone;
+  const toggleShowDone = (v) => {
     setShowDone(v);
     try { localStorage.setItem('dash.showDone', v ? '1' : '0'); } catch { /* ignore */ }
   };
@@ -78,6 +78,7 @@ export default function Tasks() {
       <div className="section-head">
         <h2>{t('tasks.title')}</h2>
         <div className="actions">
+          <ShowDone value={showDone} onChange={toggleShowDone} count={doneCount} />
           <button className="add-icon" title={t('tasks.add')} aria-label={t('tasks.add')} onClick={() => setModal({ mode: 'plain' })}>
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
           </button>
@@ -87,12 +88,6 @@ export default function Tasks() {
         </div>
       </div>
 
-      <div className="toolbar">
-        <label className="switch">
-          <input type="checkbox" checked={showDone} onChange={toggleShowDone} />
-          {t('tasks.showDone')} {doneCount > 0 && <span className="muted">({doneCount})</span>}
-        </label>
-      </div>
 
       {error && <p className="error">{error}</p>}
       {tasks === null && <p className="muted">{t('app.loading')}</p>}

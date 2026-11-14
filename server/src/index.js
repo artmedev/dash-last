@@ -216,7 +216,19 @@ function validateTodo(body, partial = false) {
     out.due_date = body.due_date || null;
   }
   if (body.done !== undefined) out.done = !!body.done;
+  if (body.goal_id !== undefined) {
+    if (body.goal_id !== null && body.goal_id !== '' && !Number.isInteger(Number(body.goal_id)))
+      return { code: 'goal_not_found', error: 'Goal not found' };
+    out.goal_id = body.goal_id === null || body.goal_id === '' ? null : Number(body.goal_id);
+  }
   return { value: out };
+}
+
+/** A goal_id from the client must point to one of the user's own goals. */
+async function goalIsOwn(goalId, userId) {
+  if (goalId == null) return true;
+  const { rows } = await q(`SELECT 1 FROM goals WHERE id = $1 AND user_id = $2`, [goalId, userId]);
+  return !!rows[0];
 }
 
 api.get('/todos', wrap(async (req, res) => {
@@ -230,9 +242,10 @@ api.get('/todos', wrap(async (req, res) => {
 api.post('/todos', wrap(async (req, res) => {
   const { code, error, value } = validateTodo(req.body);
   if (code) return fail(res, 400, code, error);
+  if (!(await goalIsOwn(value.goal_id, req.userId))) return fail(res, 400, 'goal_not_found', 'Goal not found');
   const { rows } = await q(
-    `INSERT INTO todos (user_id, title, note, due_date) VALUES ($1,$2,$3,$4) RETURNING *`,
-    [req.userId, value.title, value.note ?? '', value.due_date ?? null],
+    `INSERT INTO todos (user_id, title, note, due_date, goal_id) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+    [req.userId, value.title, value.note ?? '', value.due_date ?? null, value.goal_id ?? null],
   );
   res.status(201).json(rows[0]);
 }));
@@ -240,15 +253,18 @@ api.post('/todos', wrap(async (req, res) => {
 api.patch('/todos/:id', wrap(async (req, res) => {
   const { code, error, value } = validateTodo(req.body, true);
   if (code) return fail(res, 400, code, error);
+  if (!(await goalIsOwn(value.goal_id, req.userId))) return fail(res, 400, 'goal_not_found', 'Goal not found');
   const { rows } = await q(
     `UPDATE todos SET
        title = COALESCE($3, title),
        note = COALESCE($4, note),
        due_date = CASE WHEN $5::boolean THEN $6::date ELSE due_date END,
-       done_at = CASE WHEN $7::boolean IS NULL THEN done_at WHEN $7::boolean THEN COALESCE(done_at, now()) ELSE NULL END
+       done_at = CASE WHEN $7::boolean IS NULL THEN done_at WHEN $7::boolean THEN COALESCE(done_at, now()) ELSE NULL END,
+       goal_id = CASE WHEN $8::boolean THEN $9::int ELSE goal_id END
      WHERE id = $1 AND user_id = $2 RETURNING *`,
     [req.params.id, req.userId, value.title ?? null, value.note ?? null,
-      'due_date' in value, value.due_date ?? null, value.done ?? null],
+      'due_date' in value, value.due_date ?? null, value.done ?? null,
+      'goal_id' in value, value.goal_id ?? null],
   );
   if (!rows[0]) return fail(res, 404, 'not_found', 'Not found');
   res.json(rows[0]);
@@ -256,6 +272,45 @@ api.patch('/todos/:id', wrap(async (req, res) => {
 
 api.delete('/todos/:id', wrap(async (req, res) => {
   const { rowCount } = await q(`DELETE FROM todos WHERE id = $1 AND user_id = $2`, [req.params.id, req.userId]);
+  if (!rowCount) return fail(res, 404, 'not_found', 'Not found');
+  res.json({ ok: true });
+}));
+
+// ---------- goals ----------
+const goalTitle = (body) => String(body?.title ?? '').trim().slice(0, 300);
+
+api.get('/goals', wrap(async (req, res) => {
+  const { rows } = await q(
+    `SELECT g.*,
+       (SELECT count(*)::int FROM todos t WHERE t.goal_id = g.id) AS total,
+       (SELECT count(*)::int FROM todos t WHERE t.goal_id = g.id AND t.done_at IS NOT NULL) AS done
+     FROM goals g WHERE g.user_id = $1 ORDER BY g.id`,
+    [req.userId],
+  );
+  res.json(rows);
+}));
+
+api.post('/goals', wrap(async (req, res) => {
+  const title = goalTitle(req.body);
+  if (!title) return fail(res, 400, 'title_required', 'Title is required');
+  const { rows } = await q(`INSERT INTO goals (user_id, title) VALUES ($1,$2) RETURNING *`, [req.userId, title]);
+  res.status(201).json({ ...rows[0], total: 0, done: 0 });
+}));
+
+api.patch('/goals/:id', wrap(async (req, res) => {
+  const title = goalTitle(req.body);
+  if (!title) return fail(res, 400, 'title_required', 'Title is required');
+  const { rows } = await q(
+    `UPDATE goals SET title = $3 WHERE id = $1 AND user_id = $2 RETURNING *`,
+    [req.params.id, req.userId, title],
+  );
+  if (!rows[0]) return fail(res, 404, 'not_found', 'Not found');
+  res.json(rows[0]);
+}));
+
+// The goal's tasks stay and return to the plain task list (ON DELETE SET NULL)
+api.delete('/goals/:id', wrap(async (req, res) => {
+  const { rowCount } = await q(`DELETE FROM goals WHERE id = $1 AND user_id = $2`, [req.params.id, req.userId]);
   if (!rowCount) return fail(res, 404, 'not_found', 'Not found');
   res.json({ ok: true });
 }));

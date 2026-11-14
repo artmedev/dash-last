@@ -71,5 +71,15 @@ export async function migrate() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     CREATE INDEX IF NOT EXISTS todos_user_idx ON todos (user_id);
+    -- Goals: a title and a set of tasks; progress = done tasks / all tasks.
+    -- Deleting a goal keeps its tasks (they go back to the plain task list).
+    CREATE TABLE IF NOT EXISTS goals (
+      id SERIAL PRIMARY KEY,
+      user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS goals_user_idx ON goals (user_id);
+    ALTER TABLE todos ADD COLUMN IF NOT EXISTS goal_id INT REFERENCES goals(id) ON DELETE SET NULL;
   `);
 }

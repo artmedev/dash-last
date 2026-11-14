@@ -5,7 +5,7 @@ import { useI18n } from './i18n.jsx';
 import TopIcons from './TopIcons.jsx';
 import Login from './pages/Login.jsx';
 import Tasks from './pages/Tasks.jsx';
-import Todos from './pages/Todos.jsx';
+import Plan from './pages/Plan.jsx';
 import Settings from './pages/Settings.jsx';
 import RunChat from './pages/RunChat.jsx';
 import Privacy from './pages/Privacy.jsx';
@@ -56,8 +56,8 @@ export default function App() {
       </header>
       <main>
         <Routes>
-          {/* One page: one-off tasks, then recurring tasks; the store and agent settings open as popups */}
-          <Route path="/" element={<><Todos /><Tasks /></>} />
+          {/* One page: goals, tasks, recurring tasks; the store and agent settings open as popups */}
+          <Route path="/" element={<><Plan /><Tasks /></>} />
           <Route path="/runs/:id" element={<RunChat />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
