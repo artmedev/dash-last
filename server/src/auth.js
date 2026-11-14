@@ -25,6 +25,8 @@ async function upsertUser({ sub, email, name, picture }) {
 
 export function setSession(res, user) {
   const token = jwt.sign({ uid: user.id }, process.env.SESSION_SECRET, { expiresIn: '30d' });
+  // An old host-only cookie (from before COOKIE_DOMAIN) is dropped, so only the shared one stays
+  if (cookieDomain()) res.clearCookie(COOKIE);
   res.cookie(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',

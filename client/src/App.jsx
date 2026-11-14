@@ -20,12 +20,16 @@ export default function App() {
   }, []);
   useEffect(loadMe, [loadMe]);
 
-  // Came from a private page of another artme.dev site: refresh the shared cookie and go back
+  // On every open, re-issue the session cookie for all of *.artme.dev: an old host-only cookie
+  // (from before COOKIE_DOMAIN) would otherwise never reach artme.dev/tools.
+  // Came from a private page of another artme.dev site: go back after that.
   const next = new URLSearchParams(location.search).get('next');
   const nextOk = (() => { try { const u = new URL(next); return u.protocol === 'https:' && /(^|.)artme.dev$/.test(u.hostname); } catch { return false; } })();
+  const loggedIn = !!me;
   useEffect(() => {
-    if (me && nextOk) api('/auth/refresh', { method: 'POST' }).finally(() => { window.location.href = next; });
-  }, [me, nextOk, next]);
+    if (!loggedIn) return;
+    api('/auth/refresh', { method: 'POST' }).catch(() => {}).finally(() => { if (nextOk) window.location.href = next; });
+  }, [loggedIn, nextOk, next]);
 
   // The language saved in the user's profile wins
   useEffect(() => {
