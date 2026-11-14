@@ -20,6 +20,13 @@ export default function App() {
   }, []);
   useEffect(loadMe, [loadMe]);
 
+  // Came from a private page of another artme.dev site: refresh the shared cookie and go back
+  const next = new URLSearchParams(location.search).get('next');
+  const nextOk = (() => { try { const u = new URL(next); return u.protocol === 'https:' && /(^|.)artme.dev$/.test(u.hostname); } catch { return false; } })();
+  useEffect(() => {
+    if (me && nextOk) api('/auth/refresh', { method: 'POST' }).finally(() => { window.location.href = next; });
+  }, [me, nextOk, next]);
+
   // The language saved in the user's profile wins
   useEffect(() => {
     if (me?.lang) setLang(me.lang);
@@ -29,6 +36,7 @@ export default function App() {
   if (location.pathname === '/privacy') return <Privacy />;
   if (me === undefined) return <div className="center muted">{t('app.loading')}</div>;
   if (me === null) return <Login onLogin={loadMe} />;
+  if (nextOk) return <div className="center muted">{t('app.loading')}</div>;
 
   const logout = async () => {
     await api('/auth/logout', { method: 'POST' });

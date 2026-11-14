@@ -4,6 +4,8 @@ import { OAuth2Client } from 'google-auth-library';
 import { q } from './db.js';
 
 const COOKIE = 'dash_session';
+// COOKIE_DOMAIN=.artme.dev shares the session with other sites of the domain (they check it via /api/auth/check)
+const cookieDomain = () => process.env.COOKIE_DOMAIN || undefined;
 const google = new OAuth2Client();
 
 export const devAuthEnabled = () =>
@@ -21,13 +23,14 @@ async function upsertUser({ sub, email, name, picture }) {
   return rows[0];
 }
 
-function setSession(res, user) {
+export function setSession(res, user) {
   const token = jwt.sign({ uid: user.id }, process.env.SESSION_SECRET, { expiresIn: '30d' });
   res.cookie(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
     maxAge: 30 * 24 * 3600 * 1000,
+    domain: cookieDomain(),
   });
 }
 
@@ -60,10 +63,11 @@ export async function loginDev(req, res) {
 
 export function logout(req, res) {
   res.clearCookie(COOKIE);
+  if (cookieDomain()) res.clearCookie(COOKIE, { domain: cookieDomain() });
   res.json({ ok: true });
 }
 
-const sessionUserId = (req) => {
+export const sessionUserId = (req) => {
   try {
     return jwt.verify(req.cookies[COOKIE] || '', process.env.SESSION_SECRET).uid;
   } catch {

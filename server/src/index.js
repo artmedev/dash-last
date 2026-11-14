@@ -9,6 +9,7 @@ import { currentPeriod, RECURRENCES, isDate } from './periods.js';
 import { publicCatalog, findAutomation, renderPrompt } from './automations.js';
 import {
   loginWithGoogle, loginDev, logout, requireUser, optionalUser, requireAgent, devAuthEnabled, sha256,
+  sessionUserId, setSession,
 } from './auth.js';
 
 const app = express();
@@ -32,6 +33,25 @@ app.get('/api/config', (req, res) =>
 app.post('/api/auth/google', wrap(loginWithGoogle));
 app.post('/api/auth/dev', wrap(loginDev));
 app.post('/api/auth/logout', logout);
+
+// Traefik forwardAuth for private pages on other subdomains (CHECK_EMAILS: who may open them).
+// A guest is sent to the Dash login page and comes back to the page they asked for.
+const DASH_URL = () => process.env.DASH_URL || 'https://dash.artme.dev';
+app.get('/api/auth/check', wrap(async (req, res) => {
+  // Always https: Cloudflare reaches Traefik over http
+  const asked = `https://${req.get('x-forwarded-host') || ''}${req.get('x-forwarded-uri') || '/'}`;
+  const uid = sessionUserId(req);
+  if (!uid) return res.redirect(302, `${DASH_URL()}/?next=${encodeURIComponent(asked)}`);
+  const { rows } = await q('SELECT email FROM users WHERE id = $1', [uid]);
+  const allowed = (process.env.CHECK_EMAILS || '').toLowerCase().split(',').map((s) => s.trim()).filter(Boolean);
+  if (!rows[0] || !allowed.includes(rows[0].email.toLowerCase())) return res.status(403).send('Forbidden');
+  res.status(204).end();
+}));
+// Re-issues the session cookie (for COOKIE_DOMAIN) before Dash sends the user back to `next`
+app.post('/api/auth/refresh', requireUser, (req, res) => {
+  setSession(res, { id: req.userId });
+  res.json({ ok: true });
+});
 
 const api = express.Router();
 api.use(requireUser);
