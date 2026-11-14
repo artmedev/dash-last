@@ -92,3 +92,12 @@ npm run dev:client    # http://localhost:5173 (интерфейс)
    ```
    `rostok.sh` монтирует в стек входные файлы сборки и `.env.prod` из этого репозитория.
 3. Локальный агент смотрит на сервер через `agent/.agent.json` (`"server": "https://dash.artme.dev"`).
+
+## Репозитории
+
+- [artmedev/dash-last](https://github.com/artmedev/dash-last): полная история, пушится сразу (remote `last`).
+- [artmedev/dash](https://github.com/artmedev/dash): те же коммиты, по одному в день (remote `origin`).
+  `push-one.ps1` копирует следующий коммит из `main` с сегодняшней датой; задача Windows `dash-push` запускает его ежедневно.
+  ```powershell
+  ./push-one.ps1 -DryRun   # показать, что опубликуется следующим
+  ```

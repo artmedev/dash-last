@@ -92,3 +92,12 @@ stack `stacks/dash`): the app container (this repo's `Dockerfile`) and its own P
    ```
    `rostok.sh` mounts the Docker build inputs and `.env.prod` from this repo into the stack.
 3. The local agent points to the server in `agent/.agent.json` (`"server": "https://dash.artme.dev"`).
+
+## Repositories
+
+- [artmedev/dash-last](https://github.com/artmedev/dash-last): the full history, pushed as it is written (remote `last`).
+- [artmedev/dash](https://github.com/artmedev/dash): the same commits published one per day (remote `origin`).
+  `push-one.ps1` copies the next commit from `main` with today's date; the Windows task `dash-push` runs it daily.
+  ```powershell
+  ./push-one.ps1 -DryRun   # show what would be published next
+  ```
