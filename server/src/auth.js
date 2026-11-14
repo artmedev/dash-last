@@ -84,7 +84,7 @@ export function optionalUser(req, res, next) {
   next();
 }
 
-/** Local agent (Bearer token issued in settings) */
+/** Local agent (Bearer token issued on the Agent page) */
 export async function requireAgent(req, res, next) {
   const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!token) return res.status(401).json({ error: 'agent token required' });

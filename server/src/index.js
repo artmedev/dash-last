@@ -22,6 +22,9 @@ const todayOf = (req) => {
 };
 const AGENT_ONLINE_MS = 60_000;
 
+/** Error response: `code` is stable and translated by the client, `error` is English fallback text. */
+const fail = (res, status, code, error, extra = {}) => res.status(status).json({ code, error, ...extra });
+
 // ---------- auth ----------
 app.get('/api/config', (req, res) =>
   res.json({ googleClientId: process.env.GOOGLE_CLIENT_ID || null, devAuth: devAuthEnabled() }),
@@ -33,7 +36,7 @@ app.post('/api/auth/logout', logout);
 const api = express.Router();
 api.use(requireUser);
 
-// Current user or null: a guest gets 200, not 401, to keep the console clean
+// Current user or null: a guest gets 200 instead of 401 to keep the browser console clean
 app.get('/api/me', optionalUser, wrap(async (req, res) => {
   if (!req.userId) return res.json(null);
   const { rows } = await q(
@@ -59,26 +62,27 @@ api.get('/automations', (req, res) => res.json(publicCatalog()));
 // ---------- tasks ----------
 async function loadTask(req, res) {
   const { rows } = await q(`SELECT * FROM tasks WHERE id = $1 AND user_id = $2`, [req.params.id, req.userId]);
-  if (!rows[0]) res.status(404).json({ error: 'not found' });
+  if (!rows[0]) fail(res, 404, 'not_found', 'Not found');
   return rows[0];
 }
 
 function validateTask(body, partial = false) {
   const out = {};
   if (!partial || body.title !== undefined) {
-    if (!body.title || !String(body.title).trim()) return { error: 'Title required' };
+    if (!body.title || !String(body.title).trim()) return { code: 'title_required', error: 'Title is required' };
     out.title = String(body.title).trim().slice(0, 300);
   }
   if (!partial || body.start_date !== undefined) {
-    if (!isDate(body.start_date)) return { error: 'Date required' };
+    if (!isDate(body.start_date)) return { code: 'date_required', error: 'Date is required' };
     out.start_date = body.start_date;
   }
   if (!partial || body.recurrence !== undefined) {
-    if (!RECURRENCES.includes(body.recurrence)) return { error: 'Unknown recurrence' };
+    if (!RECURRENCES.includes(body.recurrence)) return { code: 'bad_recurrence', error: 'Unknown recurrence' };
     out.recurrence = body.recurrence;
   }
   if (body.config !== undefined) {
-    if (typeof body.config !== 'object' || Array.isArray(body.config)) return { error: 'config' };
+    if (typeof body.config !== 'object' || Array.isArray(body.config))
+      return { code: 'bad_config', error: 'config must be an object' };
     out.config = body.config;
   }
   return { value: out };
@@ -110,15 +114,15 @@ api.get('/tasks', wrap(async (req, res) => {
 }));
 
 api.post('/tasks', wrap(async (req, res) => {
-  const { error, value } = validateTask(req.body);
-  if (error) return res.status(400).json({ error });
+  const { code, error, value } = validateTask(req.body);
+  if (code) return fail(res, 400, code, error);
   let slug = null;
   if (req.body.automation_slug) {
     const a = findAutomation(req.body.automation_slug);
-    if (!a) return res.status(400).json({ error: 'Automation not found' });
+    if (!a) return fail(res, 400, 'automation_not_found', 'Automation not found');
     for (const f of a.fields) {
       if (f.required && !String(value.config?.[f.key] ?? '').trim())
-        return res.status(400).json({ error: `Fill in "${f.label}"` });
+        return fail(res, 400, 'field_required', `Field "${f.key}" is required`, { field: f.key });
     }
     slug = a.slug;
   }
@@ -133,8 +137,8 @@ api.post('/tasks', wrap(async (req, res) => {
 api.patch('/tasks/:id', wrap(async (req, res) => {
   const task = await loadTask(req, res);
   if (!task) return;
-  const { error, value } = validateTask(req.body, true);
-  if (error) return res.status(400).json({ error });
+  const { code, error, value } = validateTask(req.body, true);
+  if (code) return fail(res, 400, code, error);
   const t = { ...task, ...value };
   const { rows } = await q(
     `UPDATE tasks SET title=$1, start_date=$2, recurrence=$3, config=$4 WHERE id=$5 RETURNING *`,
@@ -170,12 +174,12 @@ api.post('/tasks/:id/runs', wrap(async (req, res) => {
   const task = await loadTask(req, res);
   if (!task) return;
   const a = findAutomation(task.automation_slug);
-  if (!a) return res.status(400).json({ error: 'This task has no automation' });
+  if (!a) return fail(res, 400, 'not_automated', 'This task has no automation');
   const active = await q(
     `SELECT id FROM runs WHERE task_id = $1 AND status IN ('pending','claimed','running')`,
     [task.id],
   );
-  if (active.rows[0]) return res.status(409).json({ error: 'The automation is already running' });
+  if (active.rows[0]) return fail(res, 409, 'run_active', 'Automation is already running');
   const period = currentPeriod(task.recurrence, task.start_date, todayOf(req));
   const params = {
     ...task.config,
@@ -197,11 +201,11 @@ api.post('/runs/:id/cancel', wrap(async (req, res) => {
      WHERE id=$1 AND user_id=$2 AND status IN ('pending','claimed','running') RETURNING id`,
     [req.params.id, req.userId],
   );
-  if (!rows[0]) return res.status(404).json({ error: 'not found' });
+  if (!rows[0]) return fail(res, 404, 'not_found', 'Not found');
   res.json({ ok: true });
 }));
 
-// ---------- agent (the user's local computer) ----------
+// ---------- agent (runs on the user's own computer) ----------
 const agent = express.Router();
 agent.use(wrap(requireAgent));
 
@@ -222,14 +226,14 @@ agent.post('/claim', wrap(async (req, res) => {
 const RUN_STATUSES = ['running', 'succeeded', 'failed'];
 agent.post('/runs/:id/status', wrap(async (req, res) => {
   const { status, message } = req.body || {};
-  if (!RUN_STATUSES.includes(status)) return res.status(400).json({ error: 'bad status' });
+  if (!RUN_STATUSES.includes(status)) return fail(res, 400, 'bad_status', 'Bad status');
   const { rows } = await q(
     `UPDATE runs SET status=$1, message=COALESCE($2, message), updated_at=now()
      WHERE id=$3 AND user_id=$4 AND status IN ('claimed','running') RETURNING *`,
     [status, message ? String(message).slice(0, 4000) : null, req.params.id, req.userId],
   );
   const run = rows[0];
-  if (!run) return res.status(404).json({ error: 'run not found or already finished' });
+  if (!run) return fail(res, 404, 'run_not_found', 'Run not found or already finished');
   if (status === 'succeeded') {
     await q(
       `INSERT INTO completions (task_id, period_key) VALUES ($1,$2) ON CONFLICT DO NOTHING`,
@@ -239,11 +243,11 @@ agent.post('/runs/:id/status', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// the agent is mounted before /api, otherwise cookie auth would intercept it
+// The agent router is mounted before /api, otherwise cookie auth would intercept it
 app.use('/api/agent', agent);
 app.use('/api', api);
 
-// ---------- static files of the built client (production) ----------
+// ---------- built client (production) ----------
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../client/dist');
 if (fs.existsSync(dist)) {
   app.use(express.static(dist));
@@ -252,7 +256,7 @@ if (fs.existsSync(dist)) {
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ error: 'internal error' });
+  fail(res, 500, 'internal', 'Internal error');
 });
 
 const port = Number(process.env.PORT || 3001);

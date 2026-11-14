@@ -1,6 +1,6 @@
 import pg from 'pg';
 
-// DATE -> 'YYYY-MM-DD' string, no time zone shifts
+// DATE -> 'YYYY-MM-DD' string, no timezone shifts
 pg.types.setTypeParser(1082, (v) => v);
 
 export const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });

@@ -5,8 +5,8 @@ import { previousMonth } from './periods.js';
 
 const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../automations');
 
-// Automation store catalog. fields describe the settings that
-// the user fills in when adding an automated task.
+// Automation store catalog. `fields` are the settings the user fills in
+// when adding an automated task.
 export const AUTOMATIONS = [
   {
     slug: 'georgia-small-business-tax',
@@ -33,8 +33,8 @@ export const AUTOMATIONS = [
         required: true,
       },
     ],
-    // Extra run parameters computed from the period:
-    // a task on November 1 files the declaration for October.
+    // Extra run parameters derived from the period:
+    // a task due on November 1 files the October declaration.
     runParams: (period) => ({ tax_month: previousMonth(period.due) }),
   },
 ];

@@ -1,7 +1,7 @@
 // Dash local agent.
-// Polls the server, picks up automation runs and opens for each one
-// a separate Claude Code window with Claude in Chrome (your real Chrome with cookies).
-// In this window you enter SMS codes and answer Claude's questions.
+// Polls the server, claims automation runs and opens a separate Claude Code window
+// with Claude in Chrome for each one (the user's real Chrome with its cookies).
+// The user types SMS codes and answers Claude's questions in that window.
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -24,7 +24,7 @@ function launch(run, prompt) {
   for (const d of addDirs) {
     try { fs.mkdirSync(d, { recursive: true }); } catch { /* Claude will create it */ }
   }
-  // The first message is plain ASCII, so the console encoding does not matter.
+  // ASCII-only initial message, so the console code page does not matter.
   const initial =
     `Read the file run-${id}.md in the current directory and follow its instructions exactly, step by step. ` +
     `Talk to the user in Russian.`;
@@ -55,14 +55,14 @@ let online = null;
 async function tick() {
   try {
     const { run, prompt } = await call(cfg, '/claim');
-    if (online !== true) console.log(`Connected to ${cfg.server}. Waiting for runs…`);
+    if (online !== true) console.log(`Connected to ${cfg.server}. Waiting for runs...`);
     online = true;
     if (run) {
       await call(cfg, `/runs/${run.id}/status`, { status: 'running', message: 'Claude window opened on the computer' });
       try {
         launch(run, prompt);
       } catch (e) {
-        await call(cfg, `/runs/${run.id}/status`, { status: 'failed', message: `The agent could not open Claude: ${e.message}` });
+        await call(cfg, `/runs/${run.id}/status`, { status: 'failed', message: `Agent could not open Claude: ${e.message}` });
       }
     }
   } catch (e) {

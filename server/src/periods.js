@@ -1,5 +1,5 @@
 // Current period of a recurring task.
-// All dates are 'YYYY-MM-DD' strings, computed in UTC to avoid time zone shifts.
+// All dates are 'YYYY-MM-DD' strings computed in UTC to avoid timezone shifts.
 
 export const RECURRENCES = ['once', 'daily', 'weekly', 'monthly', 'quarterly', 'yearly'];
 
@@ -16,7 +16,7 @@ export const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test
 /** @returns {{key: string, due: string}} */
 export function currentPeriod(recurrence, startDate, today) {
   const start = parse(startDate);
-  // If the task has not started yet, count from the start date
+  // If the task has not started yet, compute relative to its start date
   const ref = parse(today) < start ? start : parse(today);
   const y = ref.getUTCFullYear();
   const m = ref.getUTCMonth();
@@ -48,7 +48,7 @@ export function currentPeriod(recurrence, startDate, today) {
   }
 }
 
-/** The month before a date: '2026-11-01' -> '2026-10' */
+/** Month preceding the date: '2026-11-01' -> '2026-10' */
 export function previousMonth(date) {
   const d = parse(date);
   d.setUTCDate(1);

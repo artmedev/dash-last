@@ -7,7 +7,7 @@ const CONFIG = path.join(AGENT_DIR, '.agent.json');
 
 export function loadConfig(argv = []) {
   let cfg = {};
-  try { cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8')); } catch { /* no file */ }
+  try { cfg = JSON.parse(fs.readFileSync(CONFIG, 'utf8')); } catch { /* no config file yet */ }
   let changed = false;
   for (let i = 0; i < argv.length; i++) {
     const m = argv[i].match(/^--(server|token)$/);
@@ -15,7 +15,7 @@ export function loadConfig(argv = []) {
   }
   if (changed) fs.writeFileSync(CONFIG, JSON.stringify(cfg, null, 2));
   if (!cfg.server || !cfg.token) {
-    console.error('Set the server and token: npm run agent -- --server http://localhost:5173 --token <token from settings>');
+    console.error('Set server and token: npm run agent -- --server http://localhost:5173 --token <token from the Agent page>');
     process.exit(1);
   }
   cfg.server = cfg.server.replace(/\/+$/, '');
