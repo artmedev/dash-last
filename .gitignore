@@ -4,5 +4,4 @@ dist
 agent/.agent.json
 agent/runs
 agent/agent.log
-agent/service.cmd
 agent/agent.pid

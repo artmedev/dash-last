@@ -1,6 +1,7 @@
 // Runs the agent in the background on Windows, without admin rights.
 //   node agent/service.js install    autostart at logon (hidden) and start right now
 //   node agent/service.js uninstall  stop and remove autostart
+//   node agent/service.js start      start the hidden background agent now
 //   node agent/service.js status     show autostart/running state and the log tail
 //
 // Autostart uses the per-user registry key HKCU\Software\Microsoft\Windows\CurrentVersion\Run.
@@ -12,7 +13,6 @@ import { AGENT_DIR } from './config.js';
 
 const RUN_KEY = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 const VALUE = 'DashAgent';
-const LAUNCHER = path.join(AGENT_DIR, 'service.cmd');
 const LOG = path.join(AGENT_DIR, 'agent.log');
 const PID_FILE = path.join(AGENT_DIR, 'agent.pid');
 
@@ -22,8 +22,10 @@ if (process.platform !== 'win32') {
 }
 
 const run = (cmd, args) => execFileSync(cmd, args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-// conhost --headless keeps the agent's console hidden
-const command = `conhost.exe --headless cmd.exe /c "${LAUNCHER}"`;
+
+// At logon a hidden PowerShell runs "service.js start", which detaches a hidden node process
+const autostartCommand =
+  `powershell.exe -NoProfile -WindowStyle Hidden -Command "& '${process.execPath}' '${path.join(AGENT_DIR, 'service.js')}' start"`;
 
 const runningPid = () => {
   try {
@@ -44,8 +46,14 @@ function stop() {
 }
 
 function start() {
-  const child = spawn('conhost.exe', ['--headless', 'cmd.exe', '/c', LAUNCHER], { detached: true, stdio: 'ignore', windowsHide: true });
+  const pid = runningPid();
+  if (pid) return console.log(`The agent is already running (pid ${pid}).`);
+  const logFd = fs.openSync(LOG, 'a');
+  const child = spawn(process.execPath, [path.join(AGENT_DIR, 'index.js')], {
+    cwd: AGENT_DIR, detached: true, windowsHide: true, stdio: ['ignore', logFd, logFd],
+  });
   child.unref();
+  console.log(`Agent started in the background (pid ${child.pid}). Log: ${LOG}`);
 }
 
 function install() {
@@ -53,14 +61,10 @@ function install() {
     console.error('Run the agent once first: npm run agent -- --server <url> --token <token>');
     process.exit(1);
   }
-  fs.writeFileSync(
-    LAUNCHER,
-    ['@echo off', 'chcp 65001 >nul', `cd /d "${AGENT_DIR}"`, `"${process.execPath}" index.js >> "${LOG}" 2>&1`, ''].join('\r\n'),
-  );
-  run('reg.exe', ['add', RUN_KEY, '/v', VALUE, '/t', 'REG_SZ', '/d', command, '/f']);
+  run('reg.exe', ['add', RUN_KEY, '/v', VALUE, '/t', 'REG_SZ', '/d', autostartCommand, '/f']);
+  console.log('Autostart installed: the agent starts hidden at logon.');
   stop();
   start();
-  console.log(`Installed: the agent starts hidden at logon and is running now. Log: ${LOG}`);
   console.log('Stop any agent you started in a terminal (Ctrl+C), otherwise two agents run at once.');
 }
 
@@ -88,8 +92,9 @@ function status() {
 const cmd = process.argv[2];
 if (cmd === 'install') install();
 else if (cmd === 'uninstall') uninstall();
+else if (cmd === 'start') start();
 else if (cmd === 'status') status();
 else {
-  console.error('Usage: node agent/service.js install|uninstall|status');
+  console.error('Usage: node agent/service.js install|uninstall|start|status');
   process.exit(1);
 }

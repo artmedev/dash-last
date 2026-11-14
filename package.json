@@ -13,6 +13,7 @@
     "agent": "node agent/index.js",
     "agent:install": "node agent/service.js install",
     "agent:uninstall": "node agent/service.js uninstall",
-    "agent:status": "node agent/service.js status"
+    "agent:status": "node agent/service.js status",
+    "agent:start": "node agent/service.js start"
   }
 }
