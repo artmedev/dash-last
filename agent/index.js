@@ -34,6 +34,7 @@ function describeTool(block) {
   const input = block.input || {};
   if (/navigate$/.test(name)) return { kind: 'browser_open', detail: input.url || '' };
   if (/claude-in-chrome|Claude_Browser/.test(name)) return { kind: 'browser' };
+  if (name === 'Read' && /run-\d+\.md$/.test(input.file_path || '')) return { kind: 'prepare' };
   if (name === 'Read' || name === 'Glob' || name === 'Grep') return { kind: 'read', detail: path.basename(input.file_path || input.path || '') };
   if (name === 'Write' || name === 'Edit') return { kind: 'write', detail: path.basename(input.file_path || '') };
   if (name === 'Bash' || name === 'PowerShell') {
@@ -55,8 +56,14 @@ function makeOutbox(runId) {
   };
 }
 
-function startSession(run, prompt, lang) {
+/**
+ * Starts Claude for a run. With `resume`, continues the run's saved Claude session
+ * (after an agent restart) instead of starting the conversation from scratch.
+ */
+async function startSession(run, prompt, lang, resume = false) {
   const id = run.id;
+  if (sessions.has(id)) return;
+  const resumeId = resume ? run.claude_session : null;
   const reportCmd = `node ${q(path.join(AGENT_DIR, 'report.js'))} ${id}`;
   const promptFile = path.join(RUNS_DIR, `run-${id}.md`);
   fs.writeFileSync(promptFile, prompt.replaceAll('{{report_command}}', reportCmd), 'utf8');
@@ -73,10 +80,11 @@ function startSession(run, prompt, lang) {
     '--verbose',
     '--chrome',
     '--permission-mode', 'auto',
+    ...(resumeId ? ['--resume', resumeId] : []),
     ...addDirs.flatMap((d) => ['--add-dir', d]),
   ];
   const proc = spawn('claude', args, { cwd: RUNS_DIR, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
-  const session = { proc, finished: false };
+  const session = { proc, finished: false, claudeSession: resumeId };
   sessions.set(id, session);
   const post = makeOutbox(id);
   const errLog = fs.createWriteStream(path.join(RUNS_DIR, `run-${id}.log`), { flags: 'a' });
@@ -85,7 +93,10 @@ function startSession(run, prompt, lang) {
   readline.createInterface({ input: proc.stdout }).on('line', (line) => {
     let e;
     try { e = JSON.parse(line); } catch { return; }
-    if (e.type === 'assistant') {
+    if (e.type === 'system' && e.subtype === 'init' && e.session_id && e.session_id !== session.claudeSession) {
+      session.claudeSession = e.session_id;
+      call(cfg, `/runs/${id}/session`, { session_id: e.session_id }).catch(() => {});
+    } else if (e.type === 'assistant') {
       const items = [];
       for (const b of e.message?.content || []) {
         if (b.type === 'text' && b.text.trim()) items.push({ role: 'assistant', text: b.text });
@@ -113,6 +124,17 @@ function startSession(run, prompt, lang) {
     }
   });
 
+  if (resumeId) {
+    // Replies the user sent while the agent was down go first; if there are none and Claude
+    // was in the middle of work, ask it to continue.
+    const { messages } = await call(cfg, `/runs/${id}/inbox`);
+    for (const m of messages) sendUser(session, m.text);
+    if (!messages.length && !run.awaiting_user) {
+      sendUser(session, 'The connection to Dash was restarted. Continue the task from where you stopped.');
+    }
+    log(`run #${id}: Claude session resumed`);
+    return;
+  }
   const initial =
     `Read the file run-${id}.md in the current directory and follow its instructions exactly, step by step. ` +
     `Talk to the user in ${LANGUAGE_NAMES[lang] || 'English'}.`;
@@ -159,7 +181,7 @@ async function claimLoop() {
     if (run) {
       await call(cfg, `/runs/${run.id}/status`, { status: 'running' });
       try {
-        startSession(run, prompt, lang);
+        await startSession(run, prompt, lang);
       } catch (e) {
         await call(cfg, `/runs/${run.id}/status`, { status: 'failed', message: `Agent could not start Claude: ${e.message}` });
       }
@@ -171,5 +193,20 @@ async function claimLoop() {
   setTimeout(claimLoop, CLAIM_MS);
 }
 
-claimLoop();
-pollInboxes();
+// After a restart, pick up runs that were in progress, then start polling
+async function resumeRuns() {
+  try {
+    const { runs } = await call(cfg, '/resume');
+    for (const { run, prompt, lang } of runs) {
+      log(`run #${run.id}: resuming after agent restart`);
+      await startSession(run, prompt, lang, true);
+    }
+  } catch (e) {
+    log(`Cannot resume runs: ${e.message}`);
+  }
+}
+
+resumeRuns().finally(() => {
+  claimLoop();
+  pollInboxes();
+});

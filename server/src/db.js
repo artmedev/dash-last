@@ -58,5 +58,7 @@ export async function migrate() {
     CREATE INDEX IF NOT EXISTS run_messages_run_idx ON run_messages (run_id, id);
     -- true while Claude has finished its turn and waits for the user's reply
     ALTER TABLE runs ADD COLUMN IF NOT EXISTS awaiting_user BOOLEAN NOT NULL DEFAULT false;
+    -- Claude Code session id: lets a restarted agent resume the same conversation
+    ALTER TABLE runs ADD COLUMN IF NOT EXISTS claude_session TEXT;
   `);
 }

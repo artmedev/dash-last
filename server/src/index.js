@@ -272,6 +272,28 @@ agent.post('/claim', wrap(async (req, res) => {
   res.json({ run, prompt, lang: run.lang });
 }));
 
+// Runs already claimed but still active: a restarted agent resumes them
+agent.post('/resume', wrap(async (req, res) => {
+  const { rows } = await q(
+    `SELECT r.*, t.automation_slug AS slug, u.lang
+     FROM runs r JOIN tasks t ON t.id = r.task_id JOIN users u ON u.id = r.user_id
+     WHERE r.user_id = $1 AND r.status IN ('claimed','running') ORDER BY r.id`,
+    [req.userId],
+  );
+  res.json({
+    runs: rows.map((run) => ({
+      run, lang: run.lang, prompt: renderPrompt(run.slug, { ...run.params, run_id: run.id }, run.lang),
+    })),
+  });
+}));
+
+agent.post('/runs/:id/session', wrap(async (req, res) => {
+  const sessionId = String(req.body?.session_id || '').slice(0, 200);
+  if (!sessionId) return fail(res, 400, 'bad_session', 'session_id required');
+  await q(`UPDATE runs SET claude_session = $1 WHERE id = $2 AND user_id = $3`, [sessionId, req.params.id, req.userId]);
+  res.json({ ok: true });
+}));
+
 const RUN_STATUSES = ['running', 'succeeded', 'failed'];
 agent.post('/runs/:id/status', wrap(async (req, res) => {
   const { status, message } = req.body || {};
