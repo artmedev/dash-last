@@ -85,7 +85,9 @@ export default function Todos() {
           aria-label={t('form.title')}
         />
         <input type="date" value={due} onChange={(e) => setDue(e.target.value)} aria-label={t('todos.due')} />
-        <button type="submit" className="primary" disabled={!title.trim()}>{t('form.submit')}</button>
+        <button type="submit" className="add-icon primary" disabled={!title.trim()} title={t('todos.add')} aria-label={t('todos.add')}>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
       </form>
 
       <div className="toolbar">

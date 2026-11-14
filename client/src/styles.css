@@ -71,10 +71,11 @@ input, select {
 
 .app { max-width: 880px; margin: 0 auto; padding: 0 16px 48px; }
 .topbar {
-  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-  padding: 14px 0; border-bottom: 1px solid var(--border); margin-bottom: 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 24px;
 }
-.logo { font-weight: 700; font-size: 18px; }
+.logo { font-weight: 700; font-size: 18px; color: var(--text); }
+.logo:hover { text-decoration: none; }
 .topbar nav { display: flex; gap: 16px; flex-wrap: wrap; }
 .topbar nav a { color: var(--muted); }
 .topbar nav a.active { color: var(--text); font-weight: 600; }
@@ -169,3 +170,29 @@ input, select {
 .todo-edit textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; }
 .todo-edit-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .todo-edit-foot input { width: auto; margin-right: auto; }
+
+/* Top right icons: agent, language, profile */
+.top-icons { display: flex; align-items: center; gap: 4px; }
+.icon-menu { position: relative; }
+.top-icon {
+  display: grid; place-items: center; width: 36px; height: 36px; padding: 0;
+  border: 1px solid transparent; border-radius: 50%; background: none; color: var(--muted);
+}
+.top-icon:hover, .top-icon[aria-expanded="true"] { color: var(--text); background: var(--card); border-color: var(--border); }
+.top-icon .avatar { width: 28px; height: 28px; border-radius: 50%; display: block; }
+.with-dot { position: relative; display: grid; }
+.with-dot .dot { position: absolute; right: -3px; bottom: -2px; border: 2px solid var(--bg); width: 10px; height: 10px; }
+.lang-icon { display: flex; align-items: center; gap: 2px; }
+.lang-code { font-size: 10px; font-weight: 600; }
+.icon-menu .menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 190px;
+  padding: 6px; display: grid; gap: 2px; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+.menu-item { display: block; width: 100%; text-align: left; border: none; background: none; padding: 7px 10px; border-radius: 6px; color: var(--text); font-size: 14px; }
+.menu-item:hover { background: var(--bg); text-decoration: none; }
+.menu-item.active { font-weight: 600; color: var(--accent); }
+.menu-head { display: grid; gap: 2px; padding: 6px 10px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; justify-items: start; }
+
+/* Concise add buttons */
+.add-icon { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border-radius: 50%; }
+main > section + section { margin-top: 36px; }

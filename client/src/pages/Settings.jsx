@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useI18n } from '../i18n.jsx';
 
-export default function Settings({ me, reload }) {
+/** Local agent settings, shown as a popup from the agent icon. */
+export default function Settings({ me, reload, onClose }) {
   const { t, tError, lang } = useI18n();
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
@@ -28,9 +29,12 @@ export default function Settings({ me, reload }) {
   const locale = lang === 'ru' ? 'ru-RU' : 'en-GB';
 
   return (
-    <section>
-      <div className="section-head"><h2>{t('settings.title')}</h2></div>
-      <div className="card">
+    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="card modal">
+        <div className="modal-head">
+          <h3>{t('settings.title')}</h3>
+          <button className="icon" onClick={onClose} aria-label={t('menu.close')}>✕</button>
+        </div>
         <p>{t('settings.intro')}</p>
         <p>
           {t('settings.status')}{' '}
@@ -53,6 +57,6 @@ export default function Settings({ me, reload }) {
         )}
         {error && <p className="error">{error}</p>}
       </div>
-    </section>
+    </div>
   );
 }

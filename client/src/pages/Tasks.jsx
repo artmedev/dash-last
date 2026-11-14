@@ -78,8 +78,12 @@ export default function Tasks() {
       <div className="section-head">
         <h2>{t('tasks.title')}</h2>
         <div className="actions">
-          <button className="primary" onClick={() => setModal({ mode: 'plain' })}>{t('tasks.add')}</button>
-          <button onClick={() => setModal({ mode: 'auto' })}>{t('tasks.addAuto')}</button>
+          <button className="add-icon" title={t('tasks.add')} aria-label={t('tasks.add')} onClick={() => setModal({ mode: 'plain' })}>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+          </button>
+          <button className="add-icon" title={t('tasks.addAuto')} aria-label={t('tasks.addAuto')} onClick={() => setModal({ mode: 'auto' })}>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M13 3 5 13h6l-1 8 8-10h-6z" /></svg>
+          </button>
         </div>
       </div>
 
@@ -88,7 +92,6 @@ export default function Tasks() {
           <input type="checkbox" checked={showDone} onChange={toggleShowDone} />
           {t('tasks.showDone')} {doneCount > 0 && <span className="muted">({doneCount})</span>}
         </label>
-        <Link to="/store">{t('tasks.storeLink')}</Link>
       </div>
 
       {error && <p className="error">{error}</p>}

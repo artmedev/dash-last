@@ -1,12 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import { api } from './api.js';
 import { useI18n } from './i18n.jsx';
-import LangSwitch from './LangSwitch.jsx';
+import TopIcons from './TopIcons.jsx';
 import Login from './pages/Login.jsx';
 import Tasks from './pages/Tasks.jsx';
 import Todos from './pages/Todos.jsx';
-import Store from './pages/Store.jsx';
 import Settings from './pages/Settings.jsx';
 import RunChat from './pages/RunChat.jsx';
 import Privacy from './pages/Privacy.jsx';
@@ -15,6 +14,7 @@ export default function App() {
   const { t, setLang } = useI18n();
   const location = useLocation();
   const [me, setMe] = useState(undefined); // undefined: loading, null: not logged in
+  const [agentOpen, setAgentOpen] = useState(false);
 
   const loadMe = useCallback(() => {
     api('/me').then(setMe).catch(() => setMe(null));
@@ -51,36 +51,18 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <span className="logo">Dash</span>
-        <nav>
-          <NavLink to="/todo">{t('nav.todos')}</NavLink>
-          <NavLink to="/" end>{t('nav.tasks')}</NavLink>
-          <NavLink to="/store">{t('nav.store')}</NavLink>
-          <NavLink to="/settings">
-            {t('nav.agent')}{' '}
-            <span
-              className={`dot ${me.agent_online ? 'on' : ''}`}
-              title={t(me.agent_online ? 'agent.online' : 'agent.offline')}
-            />
-          </NavLink>
-        </nav>
-        <span className="user">
-          {me.picture && <img src={me.picture} alt="" referrerPolicy="no-referrer" />}
-          <span className="muted">{me.email}</span>
-          <button className="link" onClick={logout}>{t('nav.logout')}</button>
-          <LangSwitch loggedIn />
-        </span>
+        <Link to="/" className="logo">Dash</Link>
+        <TopIcons me={me} onAgent={() => setAgentOpen(true)} onLogout={logout} />
       </header>
       <main>
         <Routes>
-          <Route path="/todo" element={<Todos />} />
-          <Route path="/" element={<Tasks />} />
-          <Route path="/store" element={<Store />} />
+          {/* One page: one-off tasks, then recurring tasks; the store and agent settings open as popups */}
+          <Route path="/" element={<><Todos /><Tasks /></>} />
           <Route path="/runs/:id" element={<RunChat />} />
-          <Route path="/settings" element={<Settings me={me} reload={loadMe} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>
+      {agentOpen && <Settings me={me} reload={loadMe} onClose={() => setAgentOpen(false)} />}
     </div>
   );
 }
