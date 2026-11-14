@@ -9,7 +9,7 @@ server/   API, Google sign-in, recurring tasks, automation store, runs
   automations/<slug>/prompt.md      Claude instructions for the automation (English)
   automations/<slug>/prompt-ru.md   Russian version, kept in sync with prompt.md
 client/   React UI (English by default, EN/RU switcher saved per user)
-agent/    local agent: claims runs and opens Claude Code + Claude in Chrome
+agent/    local agent: claims runs and runs Claude Code (headless) + Claude in Chrome
 ```
 
 ## Local run
@@ -50,13 +50,14 @@ The agent token identifies your agent, so nobody else can pick up your runs.
    The agent works while the command is running. To keep it running in the background (Windows),
    after the first run:
    ```bash
-   npm run agent:install     # Task Scheduler: starts hidden at logon, and right now
-   npm run agent:status      # task state and the last lines of agent/agent.log
+   npm run agent:install     # autostart at logon (hidden, no admin rights), and starts now
+   npm run agent:status      # autostart and running state, last lines of agent/agent.log
    npm run agent:uninstall   # stop and remove
    ```
-3. Click "▶ Run" on an automated task. The agent opens a Claude Code window with the prompt
-   (`agent/runs/run-<id>.md`) in your language. Claude works in your Chrome; you log in to sites and
-   type SMS codes yourself, and you confirm the declaration submission and the payment.
+3. Click "▶ Run" on an automated task: the run chat opens on the site. The agent starts Claude Code
+   without a window, with the prompt (`agent/runs/run-<id>.md`) in your language. You talk to Claude in
+   the Dash chat; Claude works in your Chrome. You log in to sites and type SMS codes yourself, and you
+   confirm the declaration submission and the payment. Claude's stderr is logged to `agent/runs/run-<id>.log`.
 4. Claude reports status with `node agent/report.js <id> running|succeeded|failed "..."`.
    After `succeeded` the task is marked done for the current period.
 

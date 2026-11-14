@@ -46,5 +46,17 @@ export async function migrate() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
     ALTER TABLE users ADD COLUMN IF NOT EXISTS lang TEXT NOT NULL DEFAULT 'en';
+    -- Run chat: Claude's messages, its tool activity and the user's replies
+    CREATE TABLE IF NOT EXISTS run_messages (
+      id SERIAL PRIMARY KEY,
+      run_id INT NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,              -- 'assistant' | 'user' | 'activity' | 'system'
+      text TEXT NOT NULL,
+      delivered BOOLEAN NOT NULL DEFAULT false,  -- user messages: already passed to Claude
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE INDEX IF NOT EXISTS run_messages_run_idx ON run_messages (run_id, id);
+    -- true while Claude has finished its turn and waits for the user's reply
+    ALTER TABLE runs ADD COLUMN IF NOT EXISTS awaiting_user BOOLEAN NOT NULL DEFAULT false;
   `);
 }

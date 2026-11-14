@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, localToday } from '../api.js';
 import { useI18n } from '../i18n.jsx';
 import TaskForm from './TaskForm.jsx';
@@ -17,6 +17,7 @@ export default function Tasks() {
   const [showDone, setShowDone] = useState(readShowDone);
   const [modal, setModal] = useState(null); // {mode:'plain'} | {mode:'auto', slug?}
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
 
   const load = useCallback(() => {
     api(`/tasks?today=${localToday()}`).then(setTasks).catch((e) => setError(tError(e)));
@@ -57,7 +58,16 @@ export default function Tasks() {
   const remove = (x) => {
     if (confirm(t('tasks.confirmDelete', { title: x.title }))) act(() => api(`/tasks/${x.id}`, { method: 'DELETE' }));
   };
-  const run = (x) => act(() => api(`/tasks/${x.id}/runs`, { method: 'POST', body: { today: localToday() } }));
+  // Starting a run opens its chat right away
+  const run = async (x) => {
+    setError('');
+    try {
+      const r = await api(`/tasks/${x.id}/runs`, { method: 'POST', body: { today: localToday() } });
+      navigate(`/runs/${r.id}`);
+    } catch (e) {
+      setError(tError(e));
+    }
+  };
   const cancelRun = (x) => act(() => api(`/runs/${x.last_run.id}/cancel`, { method: 'POST' }));
 
   const visible = tasks?.filter((x) => showDone || !x.done) ?? [];
@@ -101,9 +111,12 @@ export default function Tasks() {
                   <span>{t('tasks.due', { date: formatDate(x.period.due) })}</span>
                   {x.automation_slug && <span className="badge">{t('tasks.automation')}</span>}
                   {r && (
-                    <span className={`run run-${r.status}`} title={r.message || ''}>
+                    <Link to={`/runs/${r.id}`} className={`run run-${r.status}`} title={t('tasks.openChat')}>
                       {t('tasks.run', { id: r.id, status: t(`run.${r.status}`) })}
-                    </span>
+                    </Link>
+                  )}
+                  {active && r.awaiting_user && (
+                    <Link to={`/runs/${r.id}`} className="badge awaiting">{t('tasks.awaiting')}</Link>
                   )}
                 </div>
                 {r?.message && !active && <div className="run-msg">{r.message}</div>}
@@ -112,6 +125,7 @@ export default function Tasks() {
                 {x.automation_slug && !active && !x.done && (
                   <button onClick={() => run(x)}>{t('tasks.start')}</button>
                 )}
+                {active && <button onClick={() => navigate(`/runs/${r.id}`)}>{t('tasks.openChat')}</button>}
                 {active && <button onClick={() => cancelRun(x)}>{t('tasks.cancel')}</button>}
                 <button className="icon" title={t('tasks.delete')} onClick={() => remove(x)}>✕</button>
               </div>

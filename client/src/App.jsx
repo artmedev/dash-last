@@ -7,6 +7,7 @@ import Login from './pages/Login.jsx';
 import Tasks from './pages/Tasks.jsx';
 import Store from './pages/Store.jsx';
 import Settings from './pages/Settings.jsx';
+import RunChat from './pages/RunChat.jsx';
 
 export default function App() {
   const { t, setLang } = useI18n();
@@ -56,6 +57,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Tasks />} />
           <Route path="/store" element={<Store />} />
+          <Route path="/runs/:id" element={<RunChat />} />
           <Route path="/settings" element={<Settings me={me} reload={loadMe} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
