@@ -6,3 +6,4 @@ agent/runs
 agent/agent.log
 agent/agent.pid
 agent/private.json
+.env.prod
