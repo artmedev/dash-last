@@ -1,12 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { api } from './api.js';
+import { useI18n } from './i18n.jsx';
+import LangSwitch from './LangSwitch.jsx';
 import Login from './pages/Login.jsx';
 import Tasks from './pages/Tasks.jsx';
 import Store from './pages/Store.jsx';
 import Settings from './pages/Settings.jsx';
 
 export default function App() {
+  const { t, setLang } = useI18n();
   const [me, setMe] = useState(undefined); // undefined: loading, null: not logged in
 
   const loadMe = useCallback(() => {
@@ -14,7 +17,12 @@ export default function App() {
   }, []);
   useEffect(loadMe, [loadMe]);
 
-  if (me === undefined) return <div className="center muted">Loading…</div>;
+  // The language saved in the user's profile wins
+  useEffect(() => {
+    if (me?.lang) setLang(me.lang);
+  }, [me?.lang, setLang]);
+
+  if (me === undefined) return <div className="center muted">{t('app.loading')}</div>;
   if (me === null) return <Login onLogin={loadMe} />;
 
   const logout = async () => {
@@ -27,16 +35,21 @@ export default function App() {
       <header className="topbar">
         <span className="logo">Dash</span>
         <nav>
-          <NavLink to="/" end>Recurring tasks</NavLink>
-          <NavLink to="/store">Automation store</NavLink>
+          <NavLink to="/" end>{t('nav.tasks')}</NavLink>
+          <NavLink to="/store">{t('nav.store')}</NavLink>
           <NavLink to="/settings">
-            Agent <span className={`dot ${me.agent_online ? 'on' : ''}`} title={me.agent_online ? 'online' : 'offline'} />
+            {t('nav.agent')}{' '}
+            <span
+              className={`dot ${me.agent_online ? 'on' : ''}`}
+              title={t(me.agent_online ? 'agent.online' : 'agent.offline')}
+            />
           </NavLink>
         </nav>
         <span className="user">
           {me.picture && <img src={me.picture} alt="" referrerPolicy="no-referrer" />}
           <span className="muted">{me.email}</span>
-          <button className="link" onClick={logout}>Sign out</button>
+          <button className="link" onClick={logout}>{t('nav.logout')}</button>
+          <LangSwitch loggedIn />
         </span>
       </header>
       <main>

@@ -12,32 +12,11 @@ export async function api(path, { method = 'GET', body } = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const err = new Error(data.error || `HTTP ${res.status}`);
+    const err = new Error(data?.error || `HTTP ${res.status}`);
     err.status = res.status;
+    err.code = data?.code;
+    err.field = data?.field;
     throw err;
   }
   return data;
 }
-
-export const RECURRENCE_LABELS = {
-  once: 'Once',
-  daily: 'Daily',
-  weekly: 'Weekly',
-  monthly: 'Monthly',
-  quarterly: 'Quarterly',
-  yearly: 'Yearly',
-};
-
-export const RUN_LABELS = {
-  pending: 'waiting for agent',
-  claimed: 'agent starting',
-  running: 'running',
-  succeeded: 'done',
-  failed: 'failed',
-  cancelled: 'cancelled',
-};
-
-export const formatDate = (s) => {
-  const [y, m, d] = s.split('-');
-  return `${d}.${m}.${y}`;
-};

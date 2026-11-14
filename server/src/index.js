@@ -40,7 +40,7 @@ api.use(requireUser);
 app.get('/api/me', optionalUser, wrap(async (req, res) => {
   if (!req.userId) return res.json(null);
   const { rows } = await q(
-    `SELECT id, email, name, picture, agent_token_hash IS NOT NULL AS has_agent_token, agent_last_seen
+    `SELECT id, email, name, picture, lang, agent_token_hash IS NOT NULL AS has_agent_token, agent_last_seen
      FROM users WHERE id = $1`,
     [req.userId],
   );
@@ -48,6 +48,15 @@ app.get('/api/me', optionalUser, wrap(async (req, res) => {
   const u = rows[0];
   u.agent_online = !!u.agent_last_seen && Date.now() - new Date(u.agent_last_seen) < AGENT_ONLINE_MS;
   res.json(u);
+}));
+
+const LANGS = ['en', 'ru'];
+
+api.patch('/me', wrap(async (req, res) => {
+  const { lang } = req.body || {};
+  if (!LANGS.includes(lang)) return fail(res, 400, 'bad_lang', 'Unsupported language');
+  await q(`UPDATE users SET lang = $1 WHERE id = $2`, [lang, req.userId]);
+  res.json({ ok: true });
 }));
 
 api.post('/me/agent-token', wrap(async (req, res) => {

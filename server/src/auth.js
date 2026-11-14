@@ -15,7 +15,7 @@ async function upsertUser({ sub, email, name, picture }) {
   const { rows } = await q(
     `INSERT INTO users (google_sub, email, name, picture) VALUES ($1,$2,$3,$4)
      ON CONFLICT (google_sub) DO UPDATE SET email=$2, name=$3, picture=$4
-     RETURNING id, email, name, picture`,
+     RETURNING id, email, name, picture, lang, (xmax = 0) AS created`,
     [sub, email, name, picture],
   );
   return rows[0];

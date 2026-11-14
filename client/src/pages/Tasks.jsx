@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { api, localToday, formatDate, RECURRENCE_LABELS, RUN_LABELS } from '../api.js';
+import { api, localToday } from '../api.js';
+import { useI18n } from '../i18n.jsx';
 import TaskForm from './TaskForm.jsx';
 
 const ACTIVE = ['pending', 'claimed', 'running'];
@@ -10,6 +11,7 @@ const readShowDone = () => {
 };
 
 export default function Tasks() {
+  const { t, tError, formatDate } = useI18n();
   const [tasks, setTasks] = useState(null);
   const [error, setError] = useState('');
   const [showDone, setShowDone] = useState(readShowDone);
@@ -17,8 +19,8 @@ export default function Tasks() {
   const [params, setParams] = useSearchParams();
 
   const load = useCallback(() => {
-    api(`/tasks?today=${localToday()}`).then(setTasks).catch((e) => setError(e.message));
-  }, []);
+    api(`/tasks?today=${localToday()}`).then(setTasks).catch((e) => setError(tError(e)));
+  }, [tError]);
   useEffect(load, [load]);
 
   // Coming from the store: /?add=<slug>
@@ -31,7 +33,7 @@ export default function Tasks() {
   }, [params, setParams]);
 
   // Refresh the list while an automation is running
-  const hasActive = tasks?.some((t) => t.last_run && ACTIVE.includes(t.last_run.status));
+  const hasActive = tasks?.some((x) => x.last_run && ACTIVE.includes(x.last_run.status));
   useEffect(() => {
     if (!hasActive) return;
     const id = setInterval(load, 4000);
@@ -46,72 +48,72 @@ export default function Tasks() {
 
   const act = async (fn) => {
     setError('');
-    try { await fn(); load(); } catch (e) { setError(e.message); }
+    try { await fn(); load(); } catch (e) { setError(tError(e)); }
   };
 
-  const toggle = (t) => act(() => api(`/tasks/${t.id}/complete`, {
-    method: 'POST', body: { done: !t.done, today: localToday() },
+  const toggle = (x) => act(() => api(`/tasks/${x.id}/complete`, {
+    method: 'POST', body: { done: !x.done, today: localToday() },
   }));
-  const remove = (t) => {
-    if (confirm(`Delete "${t.title}"?`)) act(() => api(`/tasks/${t.id}`, { method: 'DELETE' }));
+  const remove = (x) => {
+    if (confirm(t('tasks.confirmDelete', { title: x.title }))) act(() => api(`/tasks/${x.id}`, { method: 'DELETE' }));
   };
-  const run = (t) => act(() => api(`/tasks/${t.id}/runs`, { method: 'POST', body: { today: localToday() } }));
-  const cancelRun = (t) => act(() => api(`/runs/${t.last_run.id}/cancel`, { method: 'POST' }));
+  const run = (x) => act(() => api(`/tasks/${x.id}/runs`, { method: 'POST', body: { today: localToday() } }));
+  const cancelRun = (x) => act(() => api(`/runs/${x.last_run.id}/cancel`, { method: 'POST' }));
 
-  const visible = tasks?.filter((t) => showDone || !t.done) ?? [];
-  const doneCount = tasks?.filter((t) => t.done).length ?? 0;
+  const visible = tasks?.filter((x) => showDone || !x.done) ?? [];
+  const doneCount = tasks?.filter((x) => x.done).length ?? 0;
 
   return (
     <section>
       <div className="section-head">
-        <h2>Recurring tasks</h2>
+        <h2>{t('tasks.title')}</h2>
         <div className="actions">
-          <button className="primary" onClick={() => setModal({ mode: 'plain' })}>＋ Add</button>
-          <button onClick={() => setModal({ mode: 'auto' })}>⚙ Add automated</button>
+          <button className="primary" onClick={() => setModal({ mode: 'plain' })}>{t('tasks.add')}</button>
+          <button onClick={() => setModal({ mode: 'auto' })}>{t('tasks.addAuto')}</button>
         </div>
       </div>
 
       <div className="toolbar">
         <label className="switch">
           <input type="checkbox" checked={showDone} onChange={toggleShowDone} />
-          Show completed {doneCount > 0 && <span className="muted">({doneCount})</span>}
+          {t('tasks.showDone')} {doneCount > 0 && <span className="muted">({doneCount})</span>}
         </label>
-        <Link to="/store">Automation store →</Link>
+        <Link to="/store">{t('tasks.storeLink')}</Link>
       </div>
 
       {error && <p className="error">{error}</p>}
-      {tasks === null && <p className="muted">Loading…</p>}
-      {tasks?.length === 0 && <p className="muted empty">No tasks yet. Press "＋ Add".</p>}
+      {tasks === null && <p className="muted">{t('app.loading')}</p>}
+      {tasks?.length === 0 && <p className="muted empty">{t('tasks.empty')}</p>}
 
       <ul className="tasks">
-        {visible.map((t) => {
-          const r = t.last_run;
+        {visible.map((x) => {
+          const r = x.last_run;
           const active = r && ACTIVE.includes(r.status);
           return (
-            <li key={t.id} className={t.done ? 'done' : ''}>
+            <li key={x.id} className={x.done ? 'done' : ''}>
               <label className="check">
-                <input type="checkbox" checked={t.done} onChange={() => toggle(t)} />
+                <input type="checkbox" checked={x.done} onChange={() => toggle(x)} />
               </label>
               <div className="body">
-                <div className="title">{t.title}</div>
+                <div className="title">{x.title}</div>
                 <div className="meta">
-                  <span>{RECURRENCE_LABELS[t.recurrence]}</span>
-                  <span>due {formatDate(t.period.due)}</span>
-                  {t.automation_slug && <span className="badge">automation</span>}
+                  <span>{t(`rec.${x.recurrence}`)}</span>
+                  <span>{t('tasks.due', { date: formatDate(x.period.due) })}</span>
+                  {x.automation_slug && <span className="badge">{t('tasks.automation')}</span>}
                   {r && (
                     <span className={`run run-${r.status}`} title={r.message || ''}>
-                      run #{r.id}: {RUN_LABELS[r.status]}
+                      {t('tasks.run', { id: r.id, status: t(`run.${r.status}`) })}
                     </span>
                   )}
                 </div>
                 {r?.message && !active && <div className="run-msg">{r.message}</div>}
               </div>
               <div className="row-actions">
-                {t.automation_slug && !active && !t.done && (
-                  <button onClick={() => run(t)}>▶ Run</button>
+                {x.automation_slug && !active && !x.done && (
+                  <button onClick={() => run(x)}>{t('tasks.start')}</button>
                 )}
-                {active && <button onClick={() => cancelRun(t)}>Cancel</button>}
-                <button className="icon" title="Delete" onClick={() => remove(t)}>✕</button>
+                {active && <button onClick={() => cancelRun(x)}>{t('tasks.cancel')}</button>}
+                <button className="icon" title={t('tasks.delete')} onClick={() => remove(x)}>✕</button>
               </div>
             </li>
           );
