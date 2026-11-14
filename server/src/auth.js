@@ -63,15 +63,25 @@ export function logout(req, res) {
   res.json({ ok: true });
 }
 
+const sessionUserId = (req) => {
+  try {
+    return jwt.verify(req.cookies[COOKIE] || '', process.env.SESSION_SECRET).uid;
+  } catch {
+    return null;
+  }
+};
+
 /** Browser session (cookie) */
 export function requireUser(req, res, next) {
-  try {
-    const { uid } = jwt.verify(req.cookies[COOKIE] || '', process.env.SESSION_SECRET);
-    req.userId = uid;
-    next();
-  } catch {
-    res.status(401).json({ error: 'unauthorized' });
-  }
+  req.userId = sessionUserId(req);
+  if (!req.userId) return res.status(401).json({ error: 'unauthorized' });
+  next();
+}
+
+/** Session if present: a guest is not an error */
+export function optionalUser(req, res, next) {
+  req.userId = sessionUserId(req);
+  next();
 }
 
 /** Local agent (Bearer token issued in settings) */

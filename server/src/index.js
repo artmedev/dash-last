@@ -8,7 +8,7 @@ import { q, migrate } from './db.js';
 import { currentPeriod, RECURRENCES, isDate } from './periods.js';
 import { publicCatalog, findAutomation, renderPrompt } from './automations.js';
 import {
-  loginWithGoogle, loginDev, logout, requireUser, requireAgent, devAuthEnabled, sha256,
+  loginWithGoogle, loginDev, logout, requireUser, optionalUser, requireAgent, devAuthEnabled, sha256,
 } from './auth.js';
 
 const app = express();
@@ -33,13 +33,15 @@ app.post('/api/auth/logout', logout);
 const api = express.Router();
 api.use(requireUser);
 
-api.get('/me', wrap(async (req, res) => {
+// Current user or null: a guest gets 200, not 401, to keep the console clean
+app.get('/api/me', optionalUser, wrap(async (req, res) => {
+  if (!req.userId) return res.json(null);
   const { rows } = await q(
     `SELECT id, email, name, picture, agent_token_hash IS NOT NULL AS has_agent_token, agent_last_seen
      FROM users WHERE id = $1`,
     [req.userId],
   );
-  if (!rows[0]) return res.status(401).json({ error: 'unauthorized' });
+  if (!rows[0]) return res.json(null);
   const u = rows[0];
   u.agent_online = !!u.agent_last_seen && Date.now() - new Date(u.agent_last_seen) < AGENT_ONLINE_MS;
   res.json(u);
