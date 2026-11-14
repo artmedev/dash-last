@@ -6,6 +6,15 @@ import { useI18n } from '../i18n.jsx';
 const ACTIVE = ['pending', 'claimed', 'running'];
 const POLL_MS = 2000;
 
+// Claude ends a message with [[buttons: Done]] or [[buttons: Yes | No]] to offer quick replies
+const BUTTONS_RE = /\[\[buttons:\s*([^\]]+)\]\]\s*$/;
+const splitButtons = (text) => {
+  const m = text.match(BUTTONS_RE);
+  if (!m) return { body: text, buttons: [] };
+  const buttons = m[1].split('|').map((b) => b.trim()).filter(Boolean);
+  return { body: text.slice(0, m.index).trimEnd(), buttons };
+};
+
 const parseActivity = (text) => {
   try { return JSON.parse(text); } catch { return { kind: 'other', detail: text }; }
 };
@@ -68,15 +77,15 @@ export default function RunChat() {
     bottom.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages.length, run?.awaiting_user]);
 
-  const send = async (e) => {
+  const send = async (e, override) => {
     e?.preventDefault();
-    const value = text.trim();
+    const value = (override ?? text).trim();
     if (!value || sending) return;
     setSending(true);
     setError('');
     try {
       await api(`/runs/${id}/messages`, { method: 'POST', body: { text: value } });
-      setText('');
+      if (override === undefined) setText('');
       await load();
     } catch (err) {
       setError(tError(err));
@@ -102,6 +111,10 @@ export default function RunChat() {
   if (!run) return <p className="muted">{error || t('app.loading')}</p>;
 
   const working = active && !run.awaiting_user;
+  // Quick replies from Claude's last message, while it waits for the user
+  const lastMessage = [...messages].reverse().find((m) => m.role !== 'activity');
+  const quickReplies = active && run.awaiting_user && lastMessage?.role === 'assistant'
+    ? splitButtons(lastMessage.text).buttons : [];
   const grouped = groupMessages(messages);
 
   return (
@@ -130,8 +143,16 @@ export default function RunChat() {
               </div>
             );
           }
-          return <div key={m.id} className={`msg ${m.role}`}>{m.text}</div>;
+          const body = m.role === 'assistant' ? splitButtons(m.text).body : m.text;
+          return <div key={m.id} className={`msg ${m.role}`}>{body}</div>;
         })}
+        {quickReplies.length > 0 && (
+          <div className="quick-replies">
+            {quickReplies.map((b) => (
+              <button key={b} className="primary" disabled={sending} onClick={() => send(null, b)}>{b}</button>
+            ))}
+          </div>
+        )}
         {working && grouped.length > 0 && <div className="msg typing">{t('chat.working')}<span className="dots" /></div>}
         {run.message && !active && <div className="msg system">{run.message}</div>}
         <div ref={bottom} />

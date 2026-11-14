@@ -329,7 +329,10 @@ agent.post('/runs/:id/messages', wrap(async (req, res) => {
     ]);
   }
   if (typeof req.body?.awaiting_user === 'boolean') {
-    await q(`UPDATE runs SET awaiting_user = $1, updated_at = now() WHERE id = $2`, [req.body.awaiting_user, rows[0].id]);
+    await q(
+      `UPDATE runs SET awaiting_user = $1, updated_at = now() WHERE id = $2 AND status IN ${ACTIVE_RUN}`,
+      [req.body.awaiting_user, rows[0].id],
+    );
   }
   res.json({ ok: true });
 }));

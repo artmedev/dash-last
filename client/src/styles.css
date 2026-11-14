@@ -151,3 +151,5 @@ input, select {
   flex: 1; font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--bg); color: var(--text); resize: vertical;
 }
+
+.quick-replies { display: flex; gap: 8px; flex-wrap: wrap; align-self: flex-start; }
