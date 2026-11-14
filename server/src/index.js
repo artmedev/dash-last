@@ -37,10 +37,13 @@ app.post('/api/auth/logout', logout);
 // Traefik forwardAuth for private pages on other subdomains (CHECK_EMAILS: who may open them).
 // A guest is sent to the Dash login page and comes back to the page they asked for.
 const DASH_URL = () => process.env.DASH_URL || 'https://dash.artme.dev';
+// Short device label for auth logs (no cookie values, no email)
+const authUa = (req) => (/Mobile|Android/i.test(req.get('user-agent') || '') ? 'mobile' : 'desktop');
 app.get('/api/auth/check', wrap(async (req, res) => {
   // Always https: Cloudflare reaches Traefik over http
   const asked = `https://${req.get('x-forwarded-host') || ''}${req.get('x-forwarded-uri') || '/'}`;
   const uid = sessionUserId(req);
+  console.log(`auth/check ${uid ? 'session' : 'no-session'} cookie:${req.cookies?.dash_session ? 'yes' : 'no'} ${authUa(req)}`);
   if (!uid) return res.redirect(302, `${DASH_URL()}/?next=${encodeURIComponent(asked)}`);
   const { rows } = await q('SELECT email FROM users WHERE id = $1', [uid]);
   const allowed = (process.env.CHECK_EMAILS || '').toLowerCase().split(',').map((s) => s.trim()).filter(Boolean);
@@ -49,6 +52,7 @@ app.get('/api/auth/check', wrap(async (req, res) => {
 }));
 // Re-issues the session cookie (for COOKIE_DOMAIN) before Dash sends the user back to `next`
 app.post('/api/auth/refresh', requireUser, (req, res) => {
+  console.log(`auth/refresh uid:${req.userId} ${authUa(req)}`);
   setSession(res, { id: req.userId });
   res.json({ ok: true });
 });
