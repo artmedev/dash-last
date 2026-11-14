@@ -1,0 +1,9 @@
+{
+  "name": "dash-agent",
+  "private": true,
+  "type": "module",
+  "description": "Dash local agent: picks up automation runs and opens Claude Code with Claude in Chrome",
+  "scripts": {
+    "start": "node index.js"
+  }
+}
