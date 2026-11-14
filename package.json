@@ -10,7 +10,7 @@
     "db": "docker compose up -d db",
     "dev:server": "npm run dev -w server",
     "dev:client": "npm run dev -w client",
-    "agent": "npm start -w agent",
+    "agent": "node agent/index.js",
     "agent:install": "node agent/service.js install",
     "agent:uninstall": "node agent/service.js uninstall",
     "agent:status": "node agent/service.js status"
