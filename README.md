@@ -82,4 +82,13 @@ The agent token identifies your agent, so nobody else can pick up your runs.
 
 ## Deploy
 
-TODO: homelab.
+Production runs on the homelab at https://dash.artme.dev, deployed with rostok (`D:devostok`,
+stack `stacks/dash`): the app container (this repo's `Dockerfile`) and its own Postgres behind Traefik.
+
+1. Production settings live in `.env.prod` (not committed; variables in `.env.prod.example`).
+2. Deploy: in `D:devostok` run
+   ```bash
+   ./rostok.sh deploy homelab dash
+   ```
+   `rostok.sh` mounts the Docker build inputs and `.env.prod` from this repo into the stack.
+3. The local agent points to the server in `agent/.agent.json` (`"server": "https://dash.artme.dev"`).

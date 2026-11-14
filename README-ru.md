@@ -82,4 +82,13 @@ npm run dev:client    # http://localhost:5173 (интерфейс)
 
 ## Деплой
 
-TODO: homelab.
+Продакшн работает на homelab по адресу https://dash.artme.dev, деплой через rostok (`D:devostok`,
+стек `stacks/dash`): контейнер приложения (`Dockerfile` этого репозитория) и отдельный Postgres за Traefik.
+
+1. Настройки продакшна — в `.env.prod` (не в git; переменные описаны в `.env.prod.example`).
+2. Деплой: в `D:devostok` выполните
+   ```bash
+   ./rostok.sh deploy homelab dash
+   ```
+   `rostok.sh` монтирует в стек входные файлы сборки и `.env.prod` из этого репозитория.
+3. Локальный агент смотрит на сервер через `agent/.agent.json` (`"server": "https://dash.artme.dev"`).
