@@ -248,10 +248,6 @@ const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../c
 if (fs.existsSync(dist)) {
   app.use(express.static(dist));
   app.get(/^(?!\/api).*/, (req, res) => res.sendFile(path.join(dist, 'index.html')));
-} else {
-  // Development: Vite serves the UI, redirect there
-  const devClient = process.env.DEV_CLIENT_URL || 'http://localhost:5173';
-  app.get(/^(?!\/api).*/, (req, res) => res.redirect(devClient + req.originalUrl));
 }
 
 app.use((err, req, res, next) => {
