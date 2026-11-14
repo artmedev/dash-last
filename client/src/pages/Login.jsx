@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useI18n } from '../i18n.jsx';
 import LangSwitch from '../LangSwitch.jsx';
@@ -72,6 +73,7 @@ export default function Login({ onLogin }) {
           </form>
         )}
         {error && <p className="error">{error}</p>}
+        <Link to="/privacy" className="small">{t('login.privacy')}</Link>
       </div>
     </div>
   );

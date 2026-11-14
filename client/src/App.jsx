@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
 import { api } from './api.js';
 import { useI18n } from './i18n.jsx';
 import LangSwitch from './LangSwitch.jsx';
@@ -8,9 +8,11 @@ import Tasks from './pages/Tasks.jsx';
 import Store from './pages/Store.jsx';
 import Settings from './pages/Settings.jsx';
 import RunChat from './pages/RunChat.jsx';
+import Privacy from './pages/Privacy.jsx';
 
 export default function App() {
   const { t, setLang } = useI18n();
+  const location = useLocation();
   const [me, setMe] = useState(undefined); // undefined: loading, null: not logged in
 
   const loadMe = useCallback(() => {
@@ -23,6 +25,8 @@ export default function App() {
     if (me?.lang) setLang(me.lang);
   }, [me?.lang, setLang]);
 
+  // Public page, required by Google for the OAuth consent screen
+  if (location.pathname === '/privacy') return <Privacy />;
   if (me === undefined) return <div className="center muted">{t('app.loading')}</div>;
   if (me === null) return <Login onLogin={loadMe} />;
 
