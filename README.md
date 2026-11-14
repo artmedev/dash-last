@@ -5,7 +5,7 @@
 Personal dashboard and AI assistant. Address: `dash.artme.dev`. Stack: React (Vite), Node/Express, Postgres.
 
 ```
-server/   API, Google sign-in, recurring tasks, automation store, runs
+server/   API, Google sign-in, tasks, recurring tasks, automation store, runs
   automations/<slug>/prompt.md      Claude instructions for the automation (English)
   automations/<slug>/prompt-ru.md   Russian version, kept in sync with prompt.md
 client/   React UI (English by default, EN/RU switcher saved per user)
@@ -54,12 +54,12 @@ The agent token identifies your agent, so nobody else can pick up your runs.
    npm run agent:status      # autostart and running state, last lines of agent/agent.log
    npm run agent:uninstall   # stop and remove
    ```
-3. Click "▶ Run" on an automated task: the run chat opens on the site. The agent starts Claude Code
+3. Click "▶ Run" on an automated recurring task: the run chat opens on the site. The agent starts Claude Code
    without a window, with the prompt (`agent/runs/run-<id>.md`) in your language. You talk to Claude in
    the Dash chat; Claude works in your Chrome. You log in to sites and type SMS codes yourself, and you
    confirm the declaration submission and the payment. Claude's stderr is logged to `agent/runs/run-<id>.log`.
 4. Claude reports status with `node agent/report.js <id> running|succeeded|failed "..."`.
-   After `succeeded` the task is marked done for the current period.
+   After `succeeded` the recurring task is marked done for the current period.
 
 ## Privacy during runs
 
