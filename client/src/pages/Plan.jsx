@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api, localToday } from '../api.js';
 import { useI18n } from '../i18n.jsx';
 import ShowDone from '../ShowDone.jsx';
+import DatePick, { useDueLabel } from '../DatePick.jsx';
 
 const PlusIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -14,23 +15,18 @@ const store = {
   set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } },
 };
 
-const addDays = (date, n) => {
-  const [y, m, d] = date.split('-').map(Number);
-  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
-};
-
 /** Title (+ optional due date) and Enter: adds a task, inside a goal when goalId is set. */
 function QuickAdd({ goalId = null, autoFocus, act, compact }) {
   const { t } = useI18n();
   const [title, setTitle] = useState('');
-  const [due, setDue] = useState('');
+  const [due, setDue] = useState(localToday);
   const submit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
     act(async () => {
       await api('/todos', { method: 'POST', body: { title, due_date: due || null, goal_id: goalId } });
       setTitle('');
-      setDue('');
+      setDue(localToday());
     });
   };
   return (
@@ -42,7 +38,7 @@ function QuickAdd({ goalId = null, autoFocus, act, compact }) {
         placeholder={t(goalId ? 'goals.taskPlaceholder' : 'todos.placeholder')}
         aria-label={t('form.title')}
       />
-      <input type="date" value={due} onChange={(e) => setDue(e.target.value)} aria-label={t('todos.due')} />
+      <DatePick value={due} onChange={setDue} />
       <button type="submit" className="add-icon primary" disabled={!title.trim()} title={t('todos.add')} aria-label={t('todos.add')}>
         <PlusIcon />
       </button>
@@ -52,14 +48,10 @@ function QuickAdd({ goalId = null, autoFocus, act, compact }) {
 
 /** Task rows: check off, click to edit (title, description, due date, goal), delete. */
 function TaskList({ items, goals, act }) {
-  const { t, formatDate } = useI18n();
+  const { t } = useI18n();
   const [editing, setEditing] = useState(null);
   const today = localToday();
-  const dueLabel = (d) => {
-    if (d === today) return t('todos.today');
-    if (d === addDays(today, 1)) return t('todos.tomorrow');
-    return formatDate(d);
-  };
+  const dueLabel = useDueLabel();
 
   const toggle = (x) => act(() => api(`/todos/${x.id}`, { method: 'PATCH', body: { done: !x.done_at } }));
   const remove = (x) => {
@@ -99,12 +91,7 @@ function TaskList({ items, goals, act }) {
                   onChange={(e) => setEditing({ ...editing, note: e.target.value })}
                 />
                 <div className="todo-edit-foot">
-                  <input
-                    type="date"
-                    value={editing.due_date || ''}
-                    onChange={(e) => setEditing({ ...editing, due_date: e.target.value })}
-                    aria-label={t('todos.due')}
-                  />
+                  <DatePick value={editing.due_date} onChange={(v) => setEditing({ ...editing, due_date: v })} />
                   {goals.length > 0 && (
                     <select
                       value={editing.goal_id || ''}

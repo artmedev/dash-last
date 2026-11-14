@@ -161,15 +161,15 @@ input, select {
 
 .quick-add { display: flex; gap: 8px; align-items: center; padding: 10px; margin-bottom: 12px; }
 .quick-add input:first-child { flex: 1; min-width: 0; }
-.quick-add input[type=date] { width: auto; }
-@media (max-width: 480px) { .quick-add { flex-wrap: wrap; } .quick-add input:first-child { flex-basis: 100%; } }
+@media (max-width: 480px) { .quick-add input:first-child { flex-basis: 0; } .date-text { display: none; } }
 .tasks .clickable { cursor: pointer; }
 .tasks .overdue { color: var(--err); }
 .tasks .due-today { color: var(--ok); }
 .todo-edit { flex: 1; gap: 8px; }
 .todo-edit textarea { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); resize: vertical; }
 .todo-edit-foot { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.todo-edit-foot input { width: auto; margin-right: auto; }
+.todo-edit-foot .date-pick { margin-right: auto; }
+.todo-edit-foot select { width: auto; }
 
 /* Top right icons: agent, language, profile */
 .top-icons { display: flex; align-items: center; gap: 4px; }
@@ -220,3 +220,10 @@ main > section + section { margin-top: 36px; }
 .goal-body { display: grid; gap: 8px; margin-top: 4px; }
 .goal .tasks li { padding: 8px 10px; }
 .quick-add.compact { padding: 0; margin: 0; }
+
+/* Due date: calendar icon + short label, the native picker opens on click */
+.date-pick { position: relative; display: inline-flex; flex: none; }
+.date-pick input[type=date] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; padding: 0; border: 0; }
+.date-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 10px; border-radius: 17px; color: var(--muted); white-space: nowrap; }
+.date-btn.set { color: var(--text); }
+.date-text { font-size: 13px; }
