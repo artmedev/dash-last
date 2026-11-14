@@ -47,7 +47,13 @@ The agent token identifies your agent, so nobody else can pick up your runs.
    npm run agent -- --server http://localhost:5173 --token <token>
    ```
    Server and token are saved to `agent/.agent.json`; afterwards `npm run agent` is enough.
-   The agent works while the command is running.
+   The agent works while the command is running. To keep it running in the background (Windows),
+   after the first run:
+   ```bash
+   npm run agent:install     # Task Scheduler: starts hidden at logon, and right now
+   npm run agent:status      # task state and the last lines of agent/agent.log
+   npm run agent:uninstall   # stop and remove
+   ```
 3. Click "▶ Run" on an automated task. The agent opens a Claude Code window with the prompt
    (`agent/runs/run-<id>.md`) in your language. Claude works in your Chrome; you log in to sites and
    type SMS codes yourself, and you confirm the declaration submission and the payment.
